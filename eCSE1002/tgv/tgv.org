@@ -3,6 +3,7 @@
 #+TITLE: Taylor-Green Vortex
 #+AUTHOR: Paul Bartholomew
 
+#+LATEX_HEADER: \hypersetup{colorlinks, linkcolor=red, urlcolor=blue}
 #+LATEX_HEADER: \usepackage{fullpage}
 
 * Introduction
