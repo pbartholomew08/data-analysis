@@ -47,8 +47,6 @@
 
 #+NAME: env
 #+BEGIN_SRC python :noweb strip-export
-  <<imports>>
-
   case_root = os.path.expanduser("~/DATA/incompact3d-lmn/taylorgreen-3d")
 
   jammy_dat = "jammy2016-512.dat"
