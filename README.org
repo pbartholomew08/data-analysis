@@ -5,4 +5,4 @@
 
 This repository contains my notebooks for data analysis.
 
-* [[file:eCSE1002/eCSE1002.org][eCSE1002]]2
+* [[file:eCSE1002/eCSE1002.org][eCSE1002]]
