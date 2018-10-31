@@ -16,6 +16,10 @@
     alternative locations customise the ~case_root~ variable in [[*Setup%20environment][environment]].
 - (Optional) LaTeX to generate this document
 
+** Data availability
+
+The data for this analysis is available [[https://imperialcollegelondon.box.com/s/s4saah455c8as7r7bqtuwei9nol9uc9l][here]].
+
 * Setup
 
 ** Imports
