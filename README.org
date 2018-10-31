@@ -4,3 +4,7 @@
 #+AUTHOR: Paul Bartholomew
 
 This repository contains my notebooks for data analysis.
+
+* eCSE1002
+
+** [[file:eCSE1002/non-boussinesq.org][Non-Boussinesq Paper]]

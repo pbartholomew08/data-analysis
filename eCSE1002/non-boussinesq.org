@@ -1,0 +1,8 @@
+# -*- mode: org -*-
+
+#+TITLE: Data Analysis for non-Boussinesq Paper
+#+AUTHOR: Paul Bartholomew
+
+* Requirements
+
+The python code in this notebook requires Py4Incompact3D
