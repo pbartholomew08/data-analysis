@@ -1,0 +1,6 @@
+# -*- mode: org -*-
+
+#+TITLE: Data Analysis
+#+AUTHOR: Paul Bartholomew
+
+This repository contains my notebooks for data analysis.
