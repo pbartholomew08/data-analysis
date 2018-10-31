@@ -3,10 +3,45 @@
 #+TITLE: Taylor-Green Vortex
 #+AUTHOR: Paul Bartholomew
 
+#+LATEX_HEADER: \usepackage{fullpage}
+
 * Requirements
 
 * Setup
 
+** Import and configure matplotlib
+
+#+BEGIN_SRC python
+  import matplotlib.pyplot as plt
+
+  plt.rc("text", usetex=True)
+  plt.rc("font", family="serif")
+  plt.rc("font", size=11)
+  plt.rc("legend", numpoints=1)
+  plt.rc("axes", axisbelow=True)
+#+END_SRC
+
 * Evolution of Kinetic Energy
+
+** Load reference data
+
+Load the data from Jammy2016.
+
+#+BEGIN_SRC python
+  t_ref = []
+  ke_ref = []
+  enst_ref = []
+  with open("./jammy2016-512.dat", "r") as datfile:
+    for row in datfile:
+      words = row.split()
+      if len(words) and (words[0] != "#"):
+        t_ref.append(float(words[0]))
+        ke_ref.append(float(words[1]))
+        enst_ref.append(float(words[2]))
+#+END_SRC
+
+** Load data from (Quas)Incompact3D
+
+** Plot
 
 * Evolution of Enstrophy
