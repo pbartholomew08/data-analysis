@@ -1,24 +1,60 @@
-# -*- mode: org -*-
+# -*- mode: org; org-confirm-babel-evaluate: nil -*-
 
 #+TITLE: Taylor-Green Vortex
 #+AUTHOR: Paul Bartholomew
 
 #+LATEX_HEADER: \usepackage{fullpage}
 
-* Requirements
+* Introduction
+ 
+** Requirements
+
+- python
+- matplotlib
+- Data for the Taylor-Green Vortex case
+  - This is expected to be under the path ~${HOME}/DATA/incompact3d-lmn/taylorgreen-3d~ for
+    alternative locations customise the ~case_root~ variable in [[*Setup%20environment][environment]].
+- (Optional) LaTeX to generate this document
 
 * Setup
 
-** Import and configure matplotlib
+** Imports
 
+#+NAME: imports
 #+BEGIN_SRC python
+  import os
   import matplotlib.pyplot as plt
+#+END_SRC
 
+** Configure matplotlib
+
+#+NAME: plt_config
+#+BEGIN_SRC python
   plt.rc("text", usetex=True)
   plt.rc("font", family="serif")
   plt.rc("font", size=11)
   plt.rc("legend", numpoints=1)
   plt.rc("axes", axisbelow=True)
+
+  LS={RUNS[0]:"--", RUNS[1]:"-.", RUNS[2]:":"}
+  MS={RUNS[0]:"o", RUNS[1]:"s", RUNS[2]:"^"}
+  ME={RUNS[0]:50, RUNS[1]:70, RUNS[2]:90}
+  MSIZE=4
+  LAB={RUNS[0]:"I3D", RUNS[1]:"LMN-CC", RUNS[2]:"LMN-VC"}
+#+END_SRC
+
+** Setup environment
+
+#+NAME: env
+#+BEGIN_SRC python :noweb strip-export
+  <<imports>>
+
+  case_root = os.path.expanduser("~/DATA/incompact3d-lmn/taylorgreen-3d")
+
+  jammy_dat = "jammy2016-512.dat"
+
+  RUNS=["i3d", "i3d-lmn-cc", "i3d-lmn-vc"]
+  FP={RUNS[0]:"I3D-128", RUNS[1]:"I3D-LMNCC-128", RUNS[2]:"I3D-LMNVC-128"}
 #+END_SRC
 
 * Evolution of Kinetic Energy
@@ -27,11 +63,12 @@
 
 Load the data from Jammy2016.
 
+#+NAME: jammy_ref_ke
 #+BEGIN_SRC python
   t_ref = []
   ke_ref = []
   enst_ref = []
-  with open("./jammy2016-512.dat", "r") as datfile:
+  with open(os.path.join(case_root, jammy_dat), "r") as datfile:
     for row in datfile:
       words = row.split()
       if len(words) and (words[0] != "#"):
@@ -40,8 +77,63 @@ Load the data from Jammy2016.
         enst_ref.append(float(words[2]))
 #+END_SRC
 
+#+RESULTS:
+
 ** Load data from (Quas)Incompact3D
 
+#+NAME: ke_dat
+#+BEGIN_SRC python
+  tdat = {}
+  kedat = {}
+  for run in RUNS:
+    filename = os.path.join(case_root, FP[run], "KE.dat")
+    with open(filename, "r") as datfile:
+      tdat[run] = []
+      kedat[run] = []
+      for row in datfile:
+        words = row.split()
+        tdat[run].append(float(words[-2]))
+        kedat[run].append(float(words[-1]))
+#+END_SRC
+
 ** Plot
+
+The business end: using the above, generate a plot of the evolution of kinetic energy.
+The ~tangle~ keyword (see the org code) generates a python file which can be run independently to
+generate the plot.
+
+#+BEGIN_SRC python :noweb strip-export :tangle tgv_ke.py
+  <<imports>>
+
+  <<plt_config>>
+
+  <<env>>
+
+  <<jammy_ref_ke>>
+
+  <<ke_dat>>
+
+  # Create plot
+  plt.figure(figsize=(5.0, 3.5))
+  plt.grid()
+  plt.plot(t_ref, ke_ref, label="Ref", color="black")
+
+  for run in RUNS:
+    plt.plot(tdat[run], kedat[run],
+             label=LAB[run],
+             ls=LS[run],
+             marker=MS[run], markevery=ME[run], markersize=MSIZE, mew=0)
+
+  plt.xlabel(r"$t$")
+  plt.ylabel(r"$KE$")
+  plt.legend(prop={"size":10},
+             frameon=False)
+  plt.savefig("taylorgreen_ke.eps", bbox_inches="tight")
+#+END_SRC
+
+#+RESULTS:
+: None
+
+[[file:taylorgreen_ke.eps]]
 
 * Evolution of Enstrophy
