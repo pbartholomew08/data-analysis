@@ -6,5 +6,5 @@
 #                ./run.sh ./eCSE1002/non-boussinesq.org
 #
 
-emacs -Q --batch 
+emacs ${1} -Q --batch -f org-latex-export-to-pdf --kill
 
