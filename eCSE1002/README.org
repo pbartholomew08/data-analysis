@@ -3,5 +3,20 @@
 #+TITLE: eCSE1002
 #+AUTHOR: Paul Bartholomew
 
+#+LATEX_HEADER: \hypersetup{colorlinks, linkcolor=red, urlcolor=blue}
+#+LATEX_HEADER: \usepackage{fullpage}
+
+#+OPTIONS: toc:nil
+
+These are the notebooks for different cases run as part of eCSE1002.
+The notebooks for each case can be found by following the links below.
+
+* Requirements
+
+Each notebook specifies its particular requirements, but generally these are:
+
+- emacs to process the .org notebooks
+- python 
+- (Optional) LaTeX to generate the notebook .pdf
 
 * [[file:tgv/tgv.org][Taylor-Green Vortex]]
