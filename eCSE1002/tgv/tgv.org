@@ -65,15 +65,6 @@ Import modules required for postprocessing.
   plt.rc("font", size=11)
   plt.rc("legend", numpoints=1)
   plt.rc("axes", axisbelow=True)
-
-  #
-  # Define global variables to control the plots
-  #
-  LS={RUNS[0]:"--", RUNS[1]:"-.", RUNS[2]:":"}
-  MS={RUNS[0]:"o", RUNS[1]:"s", RUNS[2]:"^"}
-  ME={RUNS[0]:50, RUNS[1]:70, RUNS[2]:90}
-  MSIZE=4
-  LAB={RUNS[0]:"I3D", RUNS[1]:"LMN-CC", RUNS[2]:"LMN-VC"}
 #+END_SRC
 
 *** Setup environment
@@ -86,6 +77,15 @@ Define variables to be used by postprocessing scripts, for instance where is the
 
   RUNS=["i3d", "i3d-lmn-cc", "i3d-lmn-vc"]
   FP={RUNS[0]:"I3D-128", RUNS[1]:"I3D-LMNCC-128", RUNS[2]:"I3D-LMNVC-128"}
+
+  #
+  # Define global variables to control the plots
+  #
+  LS={RUNS[0]:"--", RUNS[1]:"-.", RUNS[2]:":"}
+  MS={RUNS[0]:"o", RUNS[1]:"s", RUNS[2]:"^"}
+  ME={RUNS[0]:50, RUNS[1]:70, RUNS[2]:90}
+  MSIZE=4
+  LAB={RUNS[0]:"I3D", RUNS[1]:"LMN-CC", RUNS[2]:"LMN-VC"}
 #+END_SRC
 *** Load data
 
