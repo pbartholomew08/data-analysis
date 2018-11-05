@@ -3,8 +3,12 @@
 #+TITLE: Taylor-Green Vortex
 #+AUTHOR: Paul Bartholomew
 
+#+LATEX_CLASS_OPTIONS: [a4paper, 10pt]
 #+LATEX_HEADER: \hypersetup{colorlinks, linkcolor=red, urlcolor=blue}
 #+LATEX_HEADER: \usepackage{fullpage}
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \fvset{fontsize=\footnotesize}
+#+LATEX_HEADER: \RecustomVerbatimEnvironment{verbatim}{Verbatim}{}
 
 * Introduction
  
