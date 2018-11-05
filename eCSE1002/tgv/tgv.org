@@ -45,11 +45,11 @@ The data for this analysis is available [[https://imperialcollegelondon.box.com/
   plt.rc("legend", numpoints=1)
   plt.rc("axes", axisbelow=True)
 
-  LS={RUNS[0]:"--", RUNS[1]:"-.", RUNS[2]:":"}
-  MS={RUNS[0]:"o", RUNS[1]:"s", RUNS[2]:"^"}
-  ME={RUNS[0]:50, RUNS[1]:70, RUNS[2]:90}
+  LS={RUNS[0]:"--", RUNS[1]:"-.", RUNS[2]:":", RUNS[3]:"-."}
+  MS={RUNS[0]:"o", RUNS[1]:"s", RUNS[2]:"^", RUNS[3]:"v"}
+  ME={RUNS[0]:50, RUNS[1]:70, RUNS[2]:90, RUNS[3]:110}
   MSIZE=4
-  LAB={RUNS[0]:"I3D", RUNS[1]:"LMN-CC", RUNS[2]:"LMN-VC"}
+  LAB={RUNS[0]:"I3D", RUNS[1]:"LMN-CC", RUNS[2]:"LMN-VC", RUNS[3]:"LMN-IC"}
 #+END_SRC
 
 ** Setup environment
@@ -60,8 +60,8 @@ The data for this analysis is available [[https://imperialcollegelondon.box.com/
 
   jammy_dat = "jammy2016-512.dat"
 
-  RUNS=["i3d", "i3d-lmn-cc", "i3d-lmn-vc"]
-  FP={RUNS[0]:"I3D-128", RUNS[1]:"I3D-LMNCC-128", RUNS[2]:"I3D-LMNVC-128"}
+  RUNS=["i3d", "i3d-lmn-cc", "i3d-lmn-vc", "i3d-lmn-ic"]
+  FP={RUNS[0]:"I3D-128", RUNS[1]:"I3D-LMNCC-128", RUNS[2]:"I3D-LMNVC-128", RUNS[3]:"I3D-LMNIC-128"}
 #+END_SRC
 
 * Evolution of Kinetic Energy
