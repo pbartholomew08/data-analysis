@@ -71,7 +71,7 @@ This constraint is computed by:
     Note that T1 is given in terms of T2 which is used as the reference property, whilst the reference
     velocity scale is the velocity difference: U=u_1-u_2."""
 
-    u1 = 1 / (1 + 1.0 / T1)**0.5
+    u1 = uc + 1 / (1 + 1.0 / T1**0.5)
     u2 = u1 - 1
 
     return u1, u2
