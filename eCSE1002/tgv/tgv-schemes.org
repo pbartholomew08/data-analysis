@@ -1,0 +1,41 @@
+# -*- mode: org; org-confirm-babel-evaluate: nil -*-
+
+#+TITLE: Taylor-Green Vortex Schemes Investigation
+#+AUTHOR: Paul Bartholomew
+
+#+STARTUP: inlineimages
+
+#+LATEX_CLASS_OPTIONS: [a4paper, 10pt]
+#+LATEX_HEADER: \hypersetup{colorlinks, linkcolor=red, urlcolor=blue}
+#+LATEX_HEADER: \usepackage{fullpage}
+#+LATEX_HEADER: \usepackage{nicefrac}
+#+LATEX_HEADER: \usepackage{placeins}
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \fvset{fontsize=\footnotesize}
+#+LATEX_HEADER: \RecustomVerbatimEnvironment{verbatim}{Verbatim}{xleftmargin=5mm, samepage=true}
+
+* Introduction
+
+There is some uncertainty over the effect of the different schemes used in =Incompact3D= with regards
+to the values of ~fpi2~ and ~ailcaix6~[fn:ailcaixyz6].
+To resolve this the Taylor-Green Vortex case will be studied on the impermeable $0\leq{}x,y,z\leq\pi$
+sub-domain with 64^3 and 256^3 node meshes - equivalent to the resolutions I used in the paper
+submitted to /Computer Physics Communications/ and the high-resolution data provided by E. Lamballais
+respectively.
+
+The parameters ~fpi2~ and ~ailcaix6~ typically take one of two values: $\nicefrac{48}{7\pi^2}$ or 4 and
+0.49 or 0.3 respectively, leading to a total of 8 cases to be considered:
+|          |  <r> |      <r> |                  <r> |      <r> |         |
+| *Case*     | *Mesh* |       \Delta{}t |                 ~fpi2~ | ~ailcaix6~ | *Status*  |
+|----------+------+----------+----------------------+----------+---------|
+| tgv1-64  |  64^3 |     10^-3 | $\nicefrac{48}{7\pi^2}$ |     0.49 | Running |
+| tgv2-64  |  64^3 |     10^-3 | $\nicefrac{48}{7\pi^2}$ |      0.3 | Running |
+| tgv3-64  |  64^3 |     10^-3 |                  $4$ |     0.49 | Running |
+| tgv4-64  |  64^3 |     10^-3 |                  $4$ |      0.3 | Running |
+| tgv1-256 | 256^3 | 2.5\times10^-4 | $\nicefrac{48}{7\pi^2}$ |     0.49 | Running |
+| tgv2-256 | 256^3 | 2.5\times10^-4 | $\nicefrac{48}{7\pi^2}$ |      0.3 | Running |
+| tgv3-256 | 256^3 | 2.5\times10^-4 |                  $4$ |     0.49 | Running |
+| tgv4-256 | 256^3 | 2.5\times10^-4 |                  $4$ |      0.3 | Running |
+
+
+[fn:ailcaixyz6] The parameters ~ailcaiy6~ and ~ailcaiz6~ are set equal to ~ailcaix6~.
