@@ -1,9 +1,23 @@
 #+TITLE: 2D Mixing Layer
 #+AUTHOR: Paul Bartholomew
 
+#+OPTIONS: toc:nil
+
 #+LATEX_HEADER: \usepackage{fullpage}
+#+LATEX_HEADER: \usepackage{nicefrac}
+#+LATEX_HEADER: \hypersetup{colorlinks}
+
+#+BEGIN_abstract
+This is the investigation of the 2D mixing layer by Golanski2005 using QuasIncompact3D.
+Eric Lamballais has raised the fact the results are not /exactly/ the same as in Golanski2005 - must
+identify and fix the cause!
+#+END_abstract
+
+#+TOC: :headlines 2
 
 * Initial conditions
+
+The first thing to check is that the initial conditions are correct.
 
 The flow is periodic in $x$ with free-slip conditions in $y$ - assumed to be sufficiently far away
 that the flow evolution is determined by the initial conditions only.
@@ -30,12 +44,32 @@ This field is computed by
 
     return u, y
 #+END_SRC
-and visualised as
-#+BEGIN_SRC python :noweb strip-export :results file
+
+The velocities $u_1$ and $u_2$ are constrained by the condition
+\begin{equation}
+U_c = \frac{\sqrt{T_1} U_2 + \sqrt{T_2} U_1}{\sqrt{T_1} + \sqrt{T_2}} = 0 \ ,
+\end{equation}
+This constraint is computed by:
+#+NAME: calc_u1u2
+#+BEGIN_SRC python
+  def calc_u1u2(T1, uc=0):
+    """Calculates the velocity of streams 1 and 2 given the temperature of stream 1
+    for a given convective velocity.
+
+    Note that T1 is given in terms of T2 which is used as the reference property,
+    whilst the reference velocity scale is the velocity difference: U=u_1-u_2."""
+
+    u1 = uc + 1 / (1 + 1.0 / T1**0.5)
+    u2 = u1 - 1
+
+    return u1, u2
+#+END_SRC
+
+For $T_{1}=2T_{2}$ the velocity profile shown in /fig./\nbsp[[fig:umean]] is obtained.
+#+BEGIN_SRC python :noweb strip-export :results file :exports results
   import numpy as np
   import math
   import matplotlib.pyplot as plt
-
   <<calc_u1u2>>
   <<calc_meanvel>>
 
@@ -51,31 +85,15 @@ and visualised as
   plt.ylabel("y")
   plt.savefig("2d-umean.png")
   return "2d-umean.png"
+  # return u1
+  # return u2
 #+END_SRC
 
+#+NAME: fig:umean
+#+CAPTION: Mean velocity profile of mixing layer
+#+ATTR_LATEX: :width 0.8\textwidth
 #+RESULTS:
-[[file:2d-umean.png]]
-
-The velocities $u_1$ and $u_2$ are constrained by the condition
-\begin{equation}
-U_c = \frac{\sqrt{T_1} U_2 + \sqrt{T_2} U_1}{\sqrt{T_1 + T_2}} = 0
-\end{equation}
-which, in Golanski2005, $T_1=2T_2$.
-This constraint is computed by:
-#+NAME: calc_u1u2
-#+BEGIN_SRC python
-  def calc_u1u2(T1, uc=0):
-    """Calculates the velocity of streams 1 and 2 given the temperature of stream 1 for a given
-    convective velocity.
-
-    Note that T1 is given in terms of T2 which is used as the reference property, whilst the reference
-    velocity scale is the velocity difference: U=u_1-u_2."""
-
-    u1 = uc + 1 / (1 + 1.0 / T1**0.5)
-    u2 = u1 - 1
-
-    return u1, u2
-#+END_SRC
+[[file:0.759746926648]]
 
 A perturbation is applied to this initial field, given as
 \begin{align}
@@ -107,12 +125,12 @@ U_2\right) \right] \\
 
     return T
 #+END_SRC
+resulting in the temperature profile shown in /fig./\nbsp[[fig:tmean]].
 
-#+BEGIN_SRC python :noweb strip-export :results file
+#+BEGIN_SRC python :noweb strip-export :results file :exports results
   import numpy as np
   import math
   import matplotlib.pyplot as plt
-
   <<calc_u1u2>>
   <<calc_meanvel>>
   <<calc_T>>
@@ -133,6 +151,68 @@ U_2\right) \right] \\
   return "2d-temperature.png"
 #+END_SRC
 
+#+NAME: fig:tmean
+#+CAPTION: Initial temperature profile
+#+ATTR_LATEX: :width 0.8\textwidth
 #+RESULTS:
 [[file:2d-temperature.png]]
 
+These all appear to be correct and match the equivalent code/initialisation of QuasIncompact3D.
+
+* Mesh
+
+I have been running on a $256\times513$ mesh whereas Golanski2005 use a $256\times501$ mesh, to ensure
+agreement I will use the same mesh - the choice of $513$ was for efficiency reasons.
+
+* Timestepping
+
+As emphasised in Golanski2005 the timescheme should be RK3.
+It is not clear what timestep Golanski2005 uses - for their time-accuracy investigation
+$10^{-3}\leq\Delta{}t\leq7.5\times10^{-2}$ and I ran with $\Delta{}t=10^{-2}$, being approximately in the
+middle of this range.
+For purposes of matching Golanski2005 it is worth running also at $\Delta{}t=10^{-3}$.
+
+* Numerical scheme
+
+I am using the (quasi) skew-symmetric form of the momentum equations:
+#+BEGIN_EXPORT latex
+\begin{equation}
+  \frac{\partial\rho\boldsymbol{u}}{\partial{}t} + \frac{1}{2}\left(
+    \boldsymbol{\nabla}\cdot\rho\boldsymbol{u}\boldsymbol{u} +
+    \rho\boldsymbol{u}\cdot\boldsymbol{\nabla}\boldsymbol{u} + \boldsymbol{u}\left(
+      \boldsymbol{u}\cdot\boldsymbol{\nabla}\rho +
+      \rho\widehat{\boldsymbol{\nabla}\cdot\boldsymbol{u}} \right) \right) = -\boldsymbol{\nabla}p +
+  \boldsymbol{\nabla}\cdot\boldsymbol{\tau}
+\end{equation}
+#+END_EXPORT
+however it is not clear in Golanski2005 what they use - they present only the conservative form so
+worth also investigating.
+
+I was using hyper-viscosity: ~fpi2=4~ should also check ~fpi2=48/7/\pi^2~ (6^th order) and ~fpi2=1~ (iLES).
+
+* Cases
+
+Given these different options to investigate, the following cases are run to non-dimensional time
+200, outputting every whole time unit:
+
+| Case | \Delta{}t     | Mom-adv      | ~fpi2~                 | Status  |
+|------+--------+--------------+----------------------+---------|
+| ~e1~   | $10^{-2}$ | skew-sym     | $\nicefrac{48}{7\pi^2}$ | Ran     |
+| ~e2~   | $10^{-3}$ | skew-sym     | $\nicefrac{48}{7\pi^2}$ | Running |
+| ~e3~   | $10^{-2}$ | skew-sym     | $4$                  | Running |
+| ~e4~   | $10^{-3}$ | skew-sym     | $4$                  | Running |
+| ~e5~   | $10^{-2}$ | skew-sym     | $1$                  | Running |
+| ~e6~   | $10^{-3}$ | skew-sym     | $1$                  | Running |
+| ~e7~   | $10^{-2}$ | conservative | $\nicefrac{48}{7\pi^2}$ |         |
+| ~e8~   | $10^{-3}$ | conservative | $\nicefrac{48}{7\pi^2}$ |         |
+| ~e9~   | $10^{-2}$ | conservative | $4$                  |         |
+| ~e10~  | $10^{-3}$ | conservative | $4$                  |         |
+| ~e11~  | $10^{-2}$ | conservative | $1$                  |         |
+| ~e12~  | $10^{-3}$ | conservative | $1$                  |         |
+|------+--------+--------------+----------------------+---------|
+
+* File options                                                     :noexport:
+
+# Local Variables:
+# org-confirm-babel-evaluate: nil
+# End:
