@@ -211,6 +211,177 @@ Given these different options to investigate, the following cases are run to non
 | ~e12~  | $10^{-3}$ | conservative | $1$                  |         |
 |------+--------+--------------+----------------------+---------|
 
+* Analysis
+
+** Plotting
+
+We use =Py4Incompact3D= to ease the plotting.
+First, we need to create ~input.json~ to inform the framework of the mesh, domain and which variables
+we want to load
+#+NAME: src:input.json
+#+BEGIN_SRC js :tangle input.json
+  {
+    "type": "postprocess_input",
+    "name": "",
+    "description": "Example Py4Incompact3D Postprocess Input file",
+    "mesh": {
+      "type": "mesh",
+      "name": "mesh_example",
+      "description": "Mesh example",
+      "properties": {
+        "Nx": 256,
+        "Ny": 501,
+        "Nz": 8,
+        "Lx": 30.7,
+        "Ly": 60.0,
+        "Lz": 1.0,
+        "BCx": 0,
+        "BCy": 1,
+        "BCz": 0
+      }
+    },
+    "rho": {
+      "type": "data",
+      "name": "rho",
+      "description": "Instantaneous density",
+      "properties": {
+        "filename": "/home/paul/DATA/incompact3d-lmn/golanski_mixinglayer2d/DATA/test_lamballais/e6/rho",
+        "direction": [0]
+      }
+    }
+  }
+#+END_SRC
+We then load this file to create a =postprocess= object which we can use to loop over time and load
+data sets.
+#+NAME: src:postproc
+#+BEGIN_SRC python
+  # Load data
+  input_file = "input.json"
+  postprocess = Postprocess(input_file)
+#+END_SRC
+
+Create the coordinates
+#+NAME: src:coord
+#+BEGIN_SRC python
+  x, y, z = postprocess.mesh.get_grid()
+  X, Y = np.meshgrid(x, y, indexing='ij')
+
+  # Shift coordinates
+  Y -= 30
+#+END_SRC
+
+At each time, we load the data, compute the contours and save the contour plot
+#+NAME: src:contour
+#+BEGIN_SRC python
+  # Load data
+  postprocess.load(time=t)
+
+  # Contour plot
+  contours=[0.501, 0.6, 0.7, 0.8, 0.9, 0.999]
+  cs = plt.contour(X, Y, postprocess.fields["rho"].data[t][:,:,0],
+                   contours,
+                   colors="r")
+  filename = "e6-t" + str(t) + ".eps"
+  plt.savefig(filename)
+  filename = "e6-t" + str(t) + ".png"
+  plt.savefig(filename)
+  plt.close
+
+  # Clear data
+  postprocess.clear_data()
+#+END_SRC
+
+The Golanski data is plotted by:
+#+NAME: src:golanski
+#+BEGIN_SRC python
+  x = []
+  y = []
+  with open("./golanski2005.csv", "r") as csvfile:
+    # # Skip first two rows (headers)
+    # next(csvfile)
+    # next(csvfile)
+
+    # Loop over and read rows
+    for row in csvfile:
+      words = row.rstrip("\n").split(",")
+      n = len(words) // 2
+      while len(x) < n:
+        x.append([])
+        y.append([])
+        x[-1] = []
+        y[-1] = []
+      for entry in range(0, n, 2):
+        if (words[2 * entry]):
+          x[entry].append(float(words[2 * entry]))
+          y[entry].append(float(words[2 * entry + 1]))
+
+  n = len(x)
+  for contour in range(n):
+    plt.plot(x[contour], y[contour],
+             color="black", ls="", marker="o", ms=2)
+#+END_SRC
+
+This all comes together in the following script:
+#+BEGIN_SRC python :results file :noweb no-export :tangle contour.py
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from Py4Incompact3D.postprocess.postprocess import Postprocess
+
+  plt.figure(figsize=(5.0, 10.0))
+  <<src:golanski>>
+
+  <<src:postproc>>
+  <<src:coord>>
+
+  t = 182
+  <<src:contour>>
+#+END_SRC
+
+#+RESULTS:
+[[file:]]
+
+** Case e1
+
+Properties: $\Delta{}t=10^{-2}$, skew-symm, ~fpi2=48/7/\pi^2~
+
+#+ATTR_LATEX: :height 0.45\textheight
+[[./e1-t182.eps]]
+
+** Case e2
+
+Properties: $\Delta{}t=10^{-3}$, skew-symm, ~fpi2=48/7/\pi^2~
+
+#+ATTR_LATEX: :height 0.45\textheight
+[[./e2-t182.eps]]
+
+** Case e3
+
+Properties: $\Delta{}t=10^{-2}$, skew-symm, ~fpi2=4~
+
+#+ATTR_LATEX: :height 0.45\textheight
+[[./e3-t182.eps]]
+
+** Case e4
+
+Properties: $\Delta{}t=10^{-3}$, skew-symm, ~fpi2=4~
+
+#+ATTR_LATEX: :height 0.45\textheight
+[[./e4-t182.eps]]
+
+** Case e5
+
+Properties: $\Delta{}t=10^{-2}$, skew-symm, ~fpi2=1~
+
+#+ATTR_LATEX: :height 0.45\textheight
+[[./e5-t182.eps]]
+
+** Case e6
+
+Properties: $\Delta{}t=10^{-3}$, skew-symm, ~fpi2=1~
+
+#+ATTR_LATEX: :height 0.45\textheight
+[[./e6-t182.eps]]
+
 * File options                                                     :noexport:
 
 # Local Variables:
