@@ -29,9 +29,9 @@ The parameters ~fpi2~ and ~ailcaix6~ typically take one of two values: $\nicefra
 | *Case*     | *Mesh* |       \Delta{}t |                 ~fpi2~ | ~ailcaix6~ | *Status*  |
 |----------+------+----------+----------------------+----------+---------|
 | tgv1-64  |  64^3 |     10^-3 | $\nicefrac{48}{7\pi^2}$ |     0.49 | Running |
-| tgv2-64  |  64^3 |     10^-3 | $\nicefrac{48}{7\pi^2}$ |      0.3 | Running |
-| tgv3-64  |  64^3 |     10^-3 |                  $4$ |     0.49 | Running |
-| tgv4-64  |  64^3 |     10^-3 |                  $4$ |      0.3 | Running |
+| tgv2-64  |  64^3 |     10^-3 | $\nicefrac{48}{7\pi^2}$ |      0.3 | Ran     |
+| tgv3-64  |  64^3 |     10^-3 |                  $4$ |     0.49 | Ran     |
+| tgv4-64  |  64^3 |     10^-3 |                  $4$ |      0.3 | Ran     |
 | tgv1-256 | 256^3 | 2.5\times10^-4 | $\nicefrac{48}{7\pi^2}$ |     0.49 | Running |
 | tgv2-256 | 256^3 | 2.5\times10^-4 | $\nicefrac{48}{7\pi^2}$ |      0.3 | Running |
 | tgv3-256 | 256^3 | 2.5\times10^-4 |                  $4$ |     0.49 | Running |
@@ -42,4 +42,158 @@ The parameters ~fpi2~ and ~ailcaix6~ typically take one of two values: $\nicefra
 
 * Postprocessing
 
+** Extracting data
+
 The data are stored in the ~OUTPUT.log~ files in the form
+#+BEGIN_EXAMPLE
+  ENSTROPHY <TIME> <VAL>
+#+END_EXAMPLE
+and
+#+BEGIN_EXAMPLE
+  KINETIC ENERGY <TIME> <VAL>
+#+END_EXAMPLE
+respectively, the first task is to extract this data by running the following script
+#+BEGIN_SRC shell
+  ROOTDIR=/home/paul/DATA/incompact3d-lmn/taylorgreen-3d/
+  SCHEMES=( 1 2 3 4 )
+  MESHES=( 64 256 )
+
+  cd ${ROOTDIR}
+  for scm in "${SCHEMES[@]}"
+  do
+      for msh in "${MESHES}"
+      do
+          cd tgv${scm}-${msh}
+          grep ENSTROPHY OUTPUT.log > ENSTROPHY.log
+          grep KINETIC OUTPUT.log > KE.log
+          cd ../
+      done
+  done
+#+END_SRC
+
+#+RESULTS:
+
+** Plotting
+
+The various data are plotted using the =python= library =matplotlib=.
+#+BEGIN_SRC python :noweb no-export :tangle tgv-plot.py
+  import matplotlib.pyplot as plt
+  <<src:dir>>
+
+  <<src:read>>
+  <<src:load>>
+  <<src:plot>>
+  <<src:save>>
+  <<src:main>>
+
+  if __name__ == "__main__":
+    main()
+#+END_SRC
+
+#+RESULTS:
+: None
+
+where the ~main~ function takes care of reading and plotting the data:
+#+NAME: src:main
+#+BEGIN_SRC python
+  def main():
+    t = {}
+    u = {}
+
+    load(t, u)
+    plt_ke, plt_enst = plot(t, u)
+    save(plt_ke, "ke")
+    save(plt_enst, "enst")
+#+END_SRC
+
+*** Loading data
+
+First, we must tell =python= where to look for the data and which data to load:
+#+NAME: src:dir
+#+BEGIN_SRC python
+  ROOTDIR="/home/paul/DATA/incompact3d-lmn/taylorgreen-3d/"
+  SCHEMES=[1, 2, 3, 4]
+  MESHES=[64, 256]
+  VARS=["ENSTROPHY", "KE"]
+#+END_SRC
+
+The following function will then read time-series data from the requested file with the time and
+value stored in the second to last and last column respectively, storing the data in the supplied
+arrays:
+#+NAME: src:read
+#+BEGIN_SRC python
+  def read(filename, t, u):
+    try:
+      with open(filename, "r") as datfile:
+        for row in datfile:
+          words = row.split()
+          t.append(float(words[-2]))
+          u.append(float(words[-1]))
+    except:
+      pass
+#+END_SRC
+
+To load the data we loop over the different schemes/meshes/variables:
+#+NAME: src:load
+#+BEGIN_SRC python
+  def load(t, u):
+    for scm in SCHEMES:
+      for msh in MESHES:
+        for var in VARS:
+
+          key = var + "-" + str(scm) + "-" + str(msh)
+          t[key] = []
+          u[key] = []
+				
+          filename = ROOTDIR + "tgv" + str(scm) + "-" + str(msh) + "/" + var + ".log"
+          read(filename, t[key], u[key])
+#+END_SRC
+
+*** Plot
+
+To plot we loop over the data dictionaries, determine which variable/scheme/mesh and plot
+#+NAME: src:plot
+#+BEGIN_SRC python
+  def plot(t, u):
+
+    plt_ke = plt.figure(figsize=(5.0, 3.5))
+    ax_ke = plt.gca()
+    plt_enst = plt.figure(figsize=(5.0, 3.5))
+    ax_enst = plt.gca()
+
+    for key in t.keys():
+
+      if (len(t[key])):
+        keywords = key.split("-")
+        var = keywords[0]
+        scm = keywords[1]
+        msh = keywords[2]
+
+        lab = "tgv" + scm + "-" + msh
+
+        if var == "ENSTROPHY":
+          fig = ax_enst
+        else:
+          fig = ax_ke
+        fig.plot(t[key], u[key], label=lab)
+
+    ax_ke.set_xlabel("t")
+    ax_ke.set_ylabel("KE")
+    ax_ke.legend()
+
+    ax_enst.set_xlabel("t")
+    ax_enst.set_ylabel("Enstrophy")
+    ax_enst.legend()
+
+    return plt_ke, plt_enst
+#+END_SRC
+
+and then save the figures in =.png= and =.eps= format
+#+NAME: src:save
+#+BEGIN_SRC python
+  def save(plt, filename):
+    pngname = filename + ".png"
+    plt.savefig(pngname, bbox_inches="tight")
+    epsname = filename + ".png"
+    plt.savefig(epsname, bbox_inches="tight")
+#+END_SRC
