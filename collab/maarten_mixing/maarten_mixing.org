@@ -1,0 +1,1189 @@
+#+TITLE: Variable-Density Mixing Layer Entrainment
+#+AUTHOR: Paul Bartholomew
+
+#+OPTIONS: toc:nil
+
+#+LATEX_HEADER: \usepackage{fullpage}
+#+LATEX_HEADER: \usepackage{nicefrac}
+#+LATEX_HEADER: \hypersetup{colorlinks}
+
+# #+BEGIN_ABSTRACT
+# This document documents the investigation of entrainment in variable-density flows using a 3D mixing
+# layer as a model of a jet.
+# #+END_ABSTRACT
+
+* Introduction
+
+The aim of this study is to investigate the entrainment effects of a non-Boussinesq jet.
+For negligible Richardson number and infinite Reynolds number, the only non-dimensional parameter
+governing the jet is the density ratio @@latex:$\nicefrac{\rho_j}{\rho_a}$@@ where subscripts @@latex:$j,
+a$@@ represent jet and ambient conditions respectively.
+We would like to know how does this ratio affect the entrainment coefficient
+@@latex:$\alpha=\nicefrac{\dot{V}_e}{\mathcal{U}_j}$@@ where @@latex:$\dot{V}_e$@@ is the flow rate per unit
+surface of ambient fluid entrained within the jet and @@latex:$\mathcal{U}_j$@@ is a velocity scale
+of the jet.
+According to experimental data of RICOU&SPALDING1961 the entrainment coefficient scales with density
+ratio as
+
+#+BEGIN_EXPORT latex
+\begin{equation}
+  \alpha = \alpha_0 \sqrt{\frac{\rho_j}{\rho_a}}
+\end{equation}
+#+END_EXPORT
+
+where @@latex:$\alpha_o=0.08$@@ is the entrainment parameter for an iso-density jet, however a theoretical
+basis for this is lacking and developing this is the basis for the present study.
+
+* Setup
+
+Rather than simulate a full jet with the wide range of length scales that entails, a temporal mixing
+layer will be used as an analogue, replacing the jet axis with time.
+
+#+CAPTION: Overview of cases
+|------+-----------------------|
+| Case | Description           |
+|------+-----------------------|
+| [[Case mx01][mx01]] | Testing initial setup |
+| [[Case v1][v1]]   | Validation study      |
+|------+-----------------------|
+
+** Case mx01
+
+This was initially testing the setup based on the 3D case of GOLANSKI2005 - it would appear to be
+working superficially.
+For our purposes however, the low Reynolds number (@@latex:$Re = 400$@@) may be too low.
+
+** Case v1
+
+This is a validation study to confirm the solver is working for high-Reynolds, variable-density
+low-speed flows.
+It is based on the simulations performed by ALMAGRO2017 for temporally evolving mixing layers with
+@@latex:$1 \leq \nicefrac{\rho_2}{\rho_2} \leq 8$@@ and @@latex:$4200 \lesssim Re_w \lesssim 7000$@@ with
+#+BEGIN_EXPORT latex
+  \begin{equation}
+    Re_w = \frac{\Delta u \delta_w}{\nu}
+  \end{equation}
+#+END_EXPORT
+where @@latex:$\Delta{}u=u_1-u_2=1$@@ is the initial free-stream velocity difference and @@latex:$\delta_w$@@ is the
+initial vorticity thickness.
+
+The Reynolds number based on the momentum thickness @@latex:$\delta_m$@@, used as the reference length
+scale, is @@latex:$Re=160$@@ for all cases.
+
+*** Domain and Mesh
+
+The domain is of dimensions @@latex:$461\times368\times173$@@ and is meshed with @@latex:$1536\times851\times576$@@ mesh
+nodes.
+The reference vertical resolution in the region @@latex:$\left|y\right|\leq20$@@ is @@latex:$\Delta{}y=0.2$@@
+and is stretched at @@latex:$1\%$@@ out to @@latex:$\left|y\right|<150$@@ where @@latex:$\Delta{}y=0.85$@@,
+the resolution is then increased again towards the walls with stretching @@latex:$3\%$@@ to give
+@@latex:$\Delta{}y=0.3$@@ at the walls.
+Incompact3D cannot do this stretching/unstretching as far as I know - therefore best approach is
+probably to try and have the average resolutions match in the inner (@@latex:$\left|y\right|\leq20$@@)
+and outer layers.
+The resolution in @@latex:$x$@@ and @@latex:$z$@@ is constant.
+
+#+CAPTION: Code to specify the domain
+#+NAME: src:domain.prm
+#+BEGIN_SRC text
+  461.0    #xlx  # Lx (Size of the box in x-direction)
+  368.0    #yly  # Ly (Size of the box in y-direction) 
+  173.0    #zlz  # Lz (Size of the box in z-direction) 
+#+END_SRC
+
+For mesh convergence, several meshes will be considered as given in table [[tab:mesh-codes]]
+
+#+NAME: tab:mesh-codes
+#+CAPTION: Mesh sizes
+|------+----------------+----------------+----------------+------------------|
+| Mesh | @@latex:$N_x$@@ | @@latex:$N_y$@@ | @@latex:$N_z$@@ | @@latex:$N_{tot}$@@ |
+|------+----------------+----------------+----------------+------------------|
+| m1   |             32 |             33 |             16 |            16896 |
+| m2   |             64 |             65 |             32 |           133120 |
+| m3   |            128 |            129 |             64 |          1056768 |
+| m4   |            256 |            257 |            128 |          8421376 |
+| m5   |            512 |            513 |            256 |         67239936 |
+| m6   |           1024 |           1025 |            512 |        537395200 |
+|------+----------------+----------------+----------------+------------------|
+#+TBLFM: $5=$2*$3*$4
+
+The mesh can be stretched by the following code:
+#+CAPTION: Mesh stretching
+#+NAME: src:mesh-stretch.prm
+#+BEGIN_SRC text
+  0      #istret # y mesh refinement (0:no, 1:center, 2:both sides, 3:bottom)
+  0.3    #beta   # Refinement parameter (beta)
+#+END_SRC
+
+The code to specify the mesh for each case is given as
+
+**** Mesh m1
+#+CAPTION: Case m1 mesh specification
+#+NAME: src:mesh.inc-m1
+#+BEGIN_SRC f90 :tangle src/mesh.inc-m1
+  integer,parameter :: nx=32, ny=33, nz=16
+#+END_SRC
+**** Mesh m2
+#+CAPTION: Case m2 mesh specification
+#+NAME: src:mesh.inc-m2
+#+BEGIN_SRC f90 :tangle src/mesh.inc-m2
+  integer,parameter :: nx=64, ny=65, nz=32
+#+END_SRC
+**** Mesh m3
+#+CAPTION: Case m3 mesh specification
+#+NAME: src:mesh.inc-m3
+#+BEGIN_SRC f90 :tangle src/mesh.inc-m3
+  integer,parameter :: nx=128, ny=129, nz=64
+#+END_SRC
+**** Mesh m4
+#+CAPTION: Case m4 mesh specification
+#+NAME: src:mesh.inc-m4
+#+BEGIN_SRC f90 :tangle src/mesh.inc-m4
+  integer,parameter :: nx=256, ny=257, nz=128
+#+END_SRC
+**** Mesh m5
+#+CAPTION: Case m5 mesh specification
+#+NAME: src:mesh.inc-m5
+#+BEGIN_SRC f90 :tangle src/mesh.inc-m5
+  integer,parameter :: nx=512, ny=513, nz=256
+#+END_SRC
+**** Mesh m6
+#+CAPTION: Case m6 mesh specification
+#+NAME: src:mesh.inc-m6
+#+BEGIN_SRC f90 :tangle src/mesh.inc-m6
+  integer,parameter :: nx=1024, ny=1025, nz=512
+#+END_SRC
+
+*** Initial conditions
+
+The flow is a mixing layer (~itype=4~) and we want to use a function to specify the initial
+fluctuations/initial conditions as specified by the following code:
+#+CAPTION: Setup a mixing layer with specified fluctuations/initialisation
+#+NAME: src:init-type.prm
+#+BEGIN_SRC text
+  4      #itype  # Type of flow  (1: Constant flowfield, 4: Mixing layer, 6: Taylor-Green)
+  1      #iin    # Inflow condition (1: classic, 2: turbinit)
+#+END_SRC
+
+The mean velocity field is specified according to the hyperbolic-tangent profile:
+#+BEGIN_EXPORT latex
+  \begin{equation}
+    u \left( y \right) = \frac{\Delta{}u}{2} \tanh \left( -\frac{y}{2 \delta_m} \right)
+  \end{equation}
+#+END_EXPORT
+and the density field as
+#+BEGIN_EXPORT latex
+  \begin{equation}
+    \rho \left( y \right) = \rho_0 \left( 1 + \lambda \left( s \right) \tanh \left( -\frac{y}{2
+          \delta_m} \right) \right)
+  \end{equation}
+#+END_EXPORT
+where @@latex:$\lambda\left(s\right)=\left(s-1\right)/\left(s+1\right)$@@ and
+@@latex:$s=\nicefrac{\rho_2}{\rho_1}$@@ is the density ratio.
+
+These (mean) initial conditions are set by the following =Fortran90= code:
+#+CAPTION: Code to set mean initial velocity and density profiles
+#+NAME: src:mean-init.inc
+#+BEGIN_SRC f90 :tangle src/mean-init.inc
+  DO i = 1, xsize(1)
+     DO j = 1, xsize(2)
+        y = (j + xstart(2) - 2) * dy - 0.5_mytype * yly
+        DO k = 1, xsize(3)
+           ux1(i, j, k) = ux1(i, j, k) + 0.5_mytype * (u1 - u2) * TANH(-0.5_mytype * y)
+           rho1(i, j, k) = (1._mytype + ((dens2 / dens1 - 1._mytype) &
+                                         / (dens2 / dens1 + 1._mytype)) &
+                                        ,* TANH(-0.5_mytype * y))
+        ENDDO
+     ENDDO
+  ENDDO
+#+END_SRC
+
+The velocities ~u1~ and ~u2~ are set by the following code:
+#+CAPTION: Code to set mean velocities
+#+NAME: src:velocity.prm
+#+BEGIN_SRC text
+  -0.5    #u1    # u1 (max velocity) (for inflow condition)
+  0.5     #u2    # u2 (min velocity) (for inflow condition)
+#+END_SRC
+
+whilst there is a case-specific code to set the densities with a case identifier according to table
+[[tab:case-codes]] with associated code in \S[[Case s1]]-[[Case s8]].
+ 
+#+NAME: tab:case-codes
+#+CAPTION: Case specifications
+|------+---------------+----------------+----------------|
+| Case | @@latex:$s$@@ | @@latex:$Re$@@ | @@latex:$Pr$@@ |
+|------+---------------+----------------+----------------|
+| s1   |             1 |            160 |            0.7 |
+| s2   |             2 |            160 |            0.7 |
+| s4   |             4 |            160 |            0.7 |
+| s8   |             8 |            160 |            0.7 |
+|------+---------------+----------------+----------------|
+
+In addition to the mean initial conditions, an initial perturbation is added to the velocity field.
+The simplest perturbation is a random fluctuation that decays as a function of
+@@latex:$\left|y\right|$@@.
+This fluctuation is setup by first setting the velocity field to a field of random numbers
+@@latex:$0\leq{}u_x,u_y,u_{z}\leq1$@@ which is then shifted and scaled to @@latex:$-u'\le{}u_x,u_y,u_{z}\leq{}u'$@@
+where @@latex:$u'$@@ is set at runtime by the ~noise~ keyword.
+
+#+CAPTION: Fortran90 code to generate a random initial velocity field about zero, decaying with @@latex:$\left|y\right|$@@
+#+BEGIN_SRC f90 :tangle src/fluct-init.inc
+  ! Create the random field
+  call system_clock(count=code)
+  call random_seed(size = ii)
+  call random_seed(put = code+63946*nrank*(/ (i - 1, i = 1, ii) /)) !
+
+  call random_number(ux1)
+  call random_number(uy1)
+  call random_number(uz1)
+
+  ! Shift and scale the random field
+  do k=1, xsize(3)
+    do j=1, xsize(2)
+      do i=1, xsize(1)
+        ux1(i, j, k) = noise * (1._mytype - 2._mytype * ux1(i, j, k))
+        uy1(i, j, k) = noise * (1._mytype - 2._mytype * uy1(i, j, k))
+        uz1(i, j, k) = noise * (1._mytype - 2._mytype * uz1(i, j, k))
+      enddo
+    enddo
+  enddo
+
+  !modulation of the random noise
+  do k=1,xsize(3)
+     z = float(k + xstart(3) - 2) * dz - zlz / 2._mytype
+     do j=1,xsize(2)
+        if (istret.eq.0) then
+           y=(j+xstart(2)-2)*dy-yly/2._mytype
+        else
+           y=yp(j+xstart(2)-1)-yly/2._mytype
+        endif
+
+        do i=1,xsize(1)
+           x = (i + xstart(1) - 2) * dx
+
+           um = noise * exp(-y**2)
+           
+           ux1(i,j,k)=um*ux1(i,j,k)
+           uy1(i,j,k)=um*uy1(i,j,k)
+           uz1(i,j,k)=um*uz1(i,j,k)
+        enddo
+     enddo
+  enddo
+#+END_SRC
+
+#+CAPTION: Runtime code to set fluctuation scale (noise1 can be ignored)
+#+NAME: src:noise.prm
+#+BEGIN_SRC text
+  0.1   #noise# Turbulence intensity (1=100%) !! Initial condition
+  0.05   #noise1# Turbulence intensity (1=100%) !! Inflow condition
+#+END_SRC
+
+Alternatively, we could read an initial flow field
+#+CAPTION: Initialise from restart file
+#+NAME: src:restart.prm
+#+BEGIN_SRC text
+  0           #ilit     # Read initial flow field ?
+#+END_SRC
+
+**** Case s1
+
+#+CAPTION: Case s1 density specification
+#+NAME: src:rho.prm-s1
+#+BEGIN_SRC text
+  1.0    #dens1 # dens1
+  1.0    #dens2 # dens2
+#+END_SRC
+**** Case s2
+
+#+CAPTION: Case s2 density specification
+#+NAME: src:rho.prm-s2
+#+BEGIN_SRC text
+  1.0    #dens1 # dens1
+  2.0    #dens2 # dens2
+#+END_SRC
+**** Case s4
+#+CAPTION: Case s4 density specification
+#+NAME: src:rho.prm-s4
+#+BEGIN_SRC text
+  1.0    #dens1 # dens1
+  4.0    #dens2 # dens2
+#+END_SRC
+**** Case s8
+#+CAPTION: Case s8 density specification
+#+NAME: src:rho.prm-s8
+#+BEGIN_SRC text
+  1.0    #dens1 # dens1
+  8.0    #dens2 # dens2
+#+END_SRC
+
+*** Boundary conditions
+
+The domain is periodic in @@latex:$x$@@ and @@latex:$z$@@ and free-slip/zero-gradient boundary
+conditions are applied at top and bottom boundaries.
+The boundary-condition section of =incompact3d.prm= follows as
+
+#+CAPTION: Boundary condition specification
+#+NAME: src:bcs.prm
+#+BEGIN_SRC text
+  0      #nclx   # nclx (BC)
+  1      #ncly   # ncly (BC) 
+  0      #nclz   # nclz (BC)
+#+END_SRC
+
+*** Gravity
+
+We can specify a gravity field by setting the Froude number in each direction, defined as
+#+BEGIN_EXPORT latex
+  \begin{equation}
+    Fr = \frac{\Delta u}{\sqrt{g l}}
+  \end{equation}
+#+END_EXPORT
+where @@latex:$\Delta u$@@ is the velocity scale, @@latex:$g$@@ the magnitude of the gravity
+vector and @@latex:$l$@@ the length scale.
+
+In QuasIncompact3D there is a Froude vector to allow gravity vectors in any (combination of)
+coordinate direction(s), with the default value 0 for this case without gravity
+#+NAME: src:froude.prm
+#+BEGIN_SRC text
+  0.     #frx   # Froude number in x direction (frx = 0 gives no gravity)
+  0.     #fry   # Froude number in y direction
+  0.     #frz   # Froude number in z direction
+#+END_SRC
+
+*** Time stepping
+
+In ALMAGRO2017 they run at @@latex:$CFL=0.5$@@ which for @@latex:$\Delta{}u=1\Rightarrow{}u_1=-u_2=-0.5$@@ gives on the
+finest grid =m6= a timestep of @@latex:$\Delta{}t=0.225$@@ (basing CFL on @@latex:$\Delta{}u$@@) for
+@@latex:$3106.72$@@ timesteps to reach @@latex:$t=700$@@.
+For a round number of steps @@latex:$3200$@@, this yields a timestep of @@latex:$\Delta{}t=0.21875$@@.
+The code to specify the timestep, number of timesteps and time integrator follows:
+#+CAPTION: Code to specify timestep
+#+NAME: src:timestep.prm
+#+BEGIN_SRC text
+  0.21875  #dt   # Time step
+#+END_SRC
+#+CAPTION: Code to specify number of steps
+#+NAME: src:nsteps.prm
+#+BEGIN_SRC text
+  1     #ifirst # First iteration
+  3200  #ilast  # Last iteration 
+#+END_SRC
+#+CAPTION: Code to specify time integrator
+#+NAME: src:integrator.prm
+#+BEGIN_SRC text
+  1      #nscheme# Temporal scheme (1:AB2, 2: RK3, 3:RK4, 4:AB3)
+#+END_SRC
+
+The period between writing data and saving checkpoints can be specified by changing ~imodulo~ and
+~isave~ respectively.
+#+NAME: src:output.prm
+#+BEGIN_SRC text
+  640       #isave    # Frequency for writing backup file  
+  32        #imodulo  # Frequency for visualization for VISU_INSTA
+#+END_SRC
+
+*** Fluid properties
+
+Apart from the densities, the Reynolds and Prandtl numbers are constant as given in table
+[[tab:case-codes]], set by the following code
+
+#+CAPTION: Common fluid properties specification
+#+NAME: src:fluid-props.prm
+#+BEGIN_SRC text
+  160. #re    # Reynolds number
+  0.7  #pr    # Prandtl number
+  1.   #sc    # Schmidt number (if passive scalar)
+#+END_SRC
+
+We can also control whether the properties are variable in space or not:
+#+CAPTION: Code to enable/disable variable properties
+#+NAME: src:varprop.prm
+#+BEGIN_SRC text
+  1      #iprops # (0: constant properties, 1: variable properties)
+#+END_SRC
+
+*** Low Mach Number
+
+To control the LMN behaviour of the solver, we can first enable or disable it:
+
+#+CAPTION: Disable LMN for case s1
+#+NAME: src:lmn-diss.prm
+#+BEGIN_SRC text
+  0      #ilmn   # (0:incompressible, 1: Low Mach Number)
+#+END_SRC
+
+#+CAPTION: Enable LMN for all other (variable-density) cases
+#+NAME: src:lmn-en.prm
+#+BEGIN_SRC text
+  1      #ilmn   # (0:incompressible, 1: Low Mach Number)
+#+END_SRC
+
+We can then decide to solve for temperature (instead of density) and whether ours is a
+multicomponent flow - for all cases we want to transport density and our flow is single component
+#+CAPTION: Disable temperature-based solver and multicomponent flow
+#+NAME: src:lmn-tm.prm
+#+BEGIN_SRC text
+  0      #isolvetemp# (0: solve for density, 1: solve for temperature)
+  0      #imulticomponent
+#+END_SRC
+
+If we are using the constant-coefficient solver (which we will choose later) we have to select an
+approximation for @@latex:$\left. \frac{\partial\rho}{\partial{}t} \right|^{n+1}$@@ which we use Golanski's approach for
+(~nrhoscheme=3~):
+#+CAPTION: Select approximation of @@latex:$\left. \frac{\partial\rho}{\partial{}t} \right|^{n+1}$@@
+#+NAME: src:lmn-approx-drhodt.prm
+#+BEGIN_SRC text
+  0      #nrhoscheme# Density scheme (how to approximate drhodt^{k+1})
+#+END_SRC
+
+Finally we can choose whether to use constant- or variable-coefficient Poisson solver.
+For cases s2 and s4 we should be able to use the constant-coefficient Poisson solver (similarly for
+s1):
+#+CAPTION: Enable constant-coefficient Poisson solver
+#+NAME: src:lmn-const.prm
+#+BEGIN_SRC text
+  0      #ivarcoeff# (0:constant-coefficient Poisson equation, 1:variable-coefficient Poisson equation)
+#+END_SRC
+whereas for case s8 we will need to solve the variable-coefficient Poisson equation
+#+CAPTION: Enable variable-coefficient Poisson solver
+#+NAME: src:lmn-var.prm
+#+BEGIN_SRC text
+  1      #ivarcoeff# (0:constant-coefficient Poisson equation, 1:variable-coefficient Poisson equation)
+#+END_SRC
+When using the variable-coefficient Poisson solver, we need to choose how to compute
+@@latex:$\widetilde{\rho}$@@ and the tolerance for the solver (this can be set the same for all cases,
+affecting only s8):
+#+CATPION: Variable-coefficient Poisson solver options
+#+NAME: src:lmn-var-opt.prm
+#+BEGIN_SRC text
+  1      #npoisscheme# How to compute rho0 in var-coeff poisson equation? (0: rho0 = MIN(rho), Anything else: harmonic average)
+  1.0e-14 #tol    # Tolerance for Poisson equation
+#+END_SRC
+
+#+NAME: src:lmn-s1.prm
+#+BEGIN_SRC text :exports none :noweb yes
+  <<src:lmn-diss.prm>>
+  <<src:lmn-tm.prm>>
+  <<src:lmn-approx-drhodt.prm>>
+  <<src:lmn-const.prm>>
+  <<src:lmn-var-opt.prm>>
+#+END_SRC
+
+#+NAME: src:lmn-s24.prm
+#+BEGIN_SRC text :exports none :noweb yes
+  <<src:lmn-en.prm>>
+  <<src:lmn-tm.prm>>
+  <<src:lmn-approx-drhodt.prm>>
+  <<src:lmn-const.prm>>
+  <<src:lmn-var-opt.prm>>
+#+END_SRC
+
+#+NAME: src:lmn-s8.prm
+#+BEGIN_SRC text :exports none :noweb yes
+  <<src:lmn-en.prm>>
+  <<src:lmn-tm.prm>>
+  <<src:lmn-approx-drhodt.prm>>
+  <<src:lmn-var.prm>>
+  <<src:lmn-var-opt.prm>>
+#+END_SRC
+
+*** Numerics
+
+We can solve either the rotational or (quasi) skew-symmetric form of the advection terms in momentum
+equation:
+#+CAPTION: Choice of momentum advection
+#+NAME: src:advmom.prm
+#+BEGIN_SRC text
+  1      #iskew  # (0:urotu, 1:skew, for the convective terms)
+#+END_SRC
+
+*** Scalar
+
+There are no scalars to solve:
+#+CAPTION: Disable passive scalar solver
+#+NAME: src:scalar.prm
+#+BEGIN_SRC text
+  0      #iscalar# (0: no scalar, 1:scalar)
+#+END_SRC
+
+*** Online postprocessing
+
+Due to the size of the largest problem (=m6=) much of the postprocessing must be performed online.
+As will be seen, this introduces several new variables to the code: @@latex:$\overline{\rho}$@@,
+@@latex:$\boldsymbol{U}$@@, @@latex:$\boldsymbol{R}$@@ and @@latex:$\overline{\epsilon}$@@ - the
+Reynolds-averaged density, the Favr\eacute-averaged velocity, the Reynolds stress tensor and the
+Reynolds-averaged dissipation rate of fluctuating kinetic energy.
+
+**** Setup
+
+The variables for post-processing must all be defined:
+#+BEGIN_SRC f90 :tangle src/newvar-dec.inc
+  real(mytype), save, allocatable, dimension(:,:,:) :: rhomean
+  real(mytype), save, allocatable, dimension(:,:,:) :: ufmean, vfmean, wfmean
+  real(mytype), save, allocatable, dimension(:,:,:) :: Rxx, Rxy, Rxz, Ryy, Ryz, Rzz, rdiss
+#+END_SRC
+and allocated:
+#+BEGIN_SRC f90 :tangle src/newvar-alloc.inc
+    if (ilmn.ne.0) then
+       allocate(rhomean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+       allocate(ufmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+       allocate(vfmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+       allocate(wfmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+    else
+       allocate(rhomean(1, 1, 1))
+       allocate(ufmean(1, 1, 1))
+       allocate(vfmean(1, 1, 1))
+       allocate(wfmean(1, 1, 1))
+    endif
+    allocate(Rxx(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+    allocate(Rxy(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+    allocate(Rxz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+    allocate(Ryy(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+    allocate(Ryz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+    allocate(Rzz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+    allocate(rdiss(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+#+END_SRC
+note that to save space we have exploited symmetry of the Reynolds stress tensor.
+**** Reynolds-averaged density
+
+The Reynolds-averaged density, defined as:
+#+BEGIN_EXPORT latex
+\begin{equation}
+  \overline{\rho} = \frac{1}{T} \int^T_0 \rho dt
+\end{equation}
+#+END_EXPORT
+is computed by the following code:
+#+NAME: src:rhomean.f90
+#+BEGIN_SRC f90
+    !! rhomean=rho1
+    call fine_to_coarseS(1,rho1,tmean)
+    rhomean(:,:,:)=rhomean(:,:,:)+tmean(:,:,:)
+#+END_SRC
+
+**** Favr\eacute-averaged velocity
+
+The Favr\eacute-averaged velocity, defined as:
+#+BEGIN_EXPORT latex
+\begin{equation}
+  U = \frac{\overline{\rho u}}{\overline{\rho}} = \frac{\overline{\rho}\ \overline{u} +
+    \overline{\rho' u'}}{\overline{\rho}}
+\end{equation}
+#+END_EXPORT
+is computed by the following code:
+#+NAME: src:ufmean.f90
+#+BEGIN_SRC f90
+    !! Favre averages
+    ta1(:,:,:) = rho1(:,:,:) * ux1(:,:,:)
+    call fine_to_coarseS(1, ta1, tmean)
+    ufmean(:,:,:) = (ufmean(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+  
+    ta1(:,:,:) = rho1(:,:,:) * uy1(:,:,:)
+    call fine_to_coarseS(1, ta1, tmean)
+    vfmean(:,:,:) = (vfmean(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+  
+    ta1(:,:,:) = rho1(:,:,:) * uz1(:,:,:)
+    call fine_to_coarseS(1, ta1, tmean)
+    vfmean(:,:,:) = (vfmean(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+#+END_SRC
+
+To compute @@latex:$\overline{\rho\boldsymbol{u}}$@@ as part of the computation of the Favr\eacute-averaged
+velocity we first do @@latex:$\boldsymbol{U}\leftarrow\overline{\rho}\boldsymbol{U}$@@ as follows:
+#+NAME: src:ufmean-prep.f90
+#+BEGIN_SRC f90
+    !! Get Favre averages to just AVG(rho u)
+    ufmean(:,:,:) = rhomean(:,:,:) * ufmean(:,:,:)
+    vfmean(:,:,:) = rhomean(:,:,:) * vfmean(:,:,:)
+    wfmean(:,:,:) = rhomean(:,:,:) * wfmean(:,:,:)
+#+END_SRC
+so that the entire computation of @@latex:$\overline{\rho}$@@ and @@latex:$\boldsymbol{U}$@@ is as
+#+NAME: src:mean-rho-favre-u.f90
+#+BEGIN_SRC f90 :tangle src/rho-uf-mean.inc :noweb tangle
+  if (ilmn.ne.0) then
+     <<src:ufmean-prep.f90>>
+     <<src:rhomean.f90>>
+     <<src:ufmean.f90>>
+  endif
+#+END_SRC
+
+**** Reynolds stresses
+
+#+BEGIN_EXPORT latex
+\begin{equation}
+  R_{ij} = \frac{\overline{\rho {u_i}'' {u_j}''}}{\overline{\rho}}
+\end{equation}
+#+END_EXPORT
+
+where @@latex:${\boldsymbol{u}}'' = \boldsymbol{u} - \boldsymbol{U}$@@ is the Favr\eacute-perturbation of
+velocity.
+
+As with the Favr\eacute-averaged velocities, we first do
+@@latex:$\boldsymbol{R}\leftarrow\overline{\rho}\boldsymbol{R}$@@:
+#+NAME: src:rstress-prep.f90
+#+BEGIN_SRC f90
+    Rxx(:,:,:) = rhomean(:,:,:) * Rxx(:,:,:)
+    Rxy(:,:,:) = rhomean(:,:,:) * Rxy(:,:,:)
+    Rxz(:,:,:) = rhomean(:,:,:) * Rxz(:,:,:)
+  
+    Ryy(:,:,:) = rhomean(:,:,:) * Ryy(:,:,:)
+    Ryz(:,:,:) = rhomean(:,:,:) * Ryz(:,:,:)
+  
+    Rzz(:,:,:) = rhomean(:,:,:) * Rzz(:,:,:)
+#+END_SRC
+*N.B.* we are exploiting the symmetry of the Reynolds stress tensor.
+
+We can then update the mean @@latex:$\overline{\rho{u_i}''{u_j}''}$@@ and divide through by
+@@latex:$\overline{\rho}$@@
+#+NAME: src:rstress.f90
+#+BEGIN_SRC f90
+    !! Rxx, Rxy, Rxz
+    ta1(:,:,:) = rho1(:,:,:) * (ux1(:,:,:) - ufmean(:,:,:)) * (ux1(:,:,:) - ufmean(:,:,:))
+    call fine_to_coarseS(1, ta1, tmean)
+    Rxx(:,:,:) = (Rxx(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+  
+    ta1(:,:,:) = rho1(:,:,:) * (ux1(:,:,:) - ufmean(:,:,:)) * (uy1(:,:,:) - vfmean(:,:,:))
+    call fine_to_coarseS(1, ta1, tmean)
+    Rxy(:,:,:) = (Rxy(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+  
+    ta1(:,:,:) = rho1(:,:,:) * (ux1(:,:,:) - ufmean(:,:,:)) * (uz1(:,:,:) - wfmean(:,:,:))
+    call fine_to_coarseS(1, ta1, tmean)
+    Rxz(:,:,:) = (Rxz(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+
+    !! Ryy, Ryz
+    ta1(:,:,:) = rho1(:,:,:) * (uy1(:,:,:) - vfmean(:,:,:)) * (uy1(:,:,:) - vfmean(:,:,:))
+    call fine_to_coarseS(1, ta1, tmean)
+    Ryy(:,:,:) = (Ryy(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+  
+    ta1(:,:,:) = rho1(:,:,:) * (uy1(:,:,:) - vfmean(:,:,:)) * (uz1(:,:,:) - wfmean(:,:,:))
+    call fine_to_coarseS(1, ta1, tmean)
+    Ryz(:,:,:) = (Ryz(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+
+    !! Rzz
+    ta1(:,:,:) = rho1(:,:,:) * (uz1(:,:,:) - wfmean(:,:,:)) * (uz1(:,:,:) - wfmean(:,:,:))
+    call fine_to_coarseS(1, ta1, tmean)
+    Rzz(:,:,:) = (Rzz(:,:,:) + tmean(:,:,:)) / rhomean(:,:,:)
+#+END_SRC
+
+Currently there is no function to compute the Reynolds stresses so we define one[fn:call-rstress]
+#+BEGIN_SRC f90 :tangle src/rstress.inc :noweb tangle
+  SUBROUTINE calc_rstress(rho1, ux1, uy1, uz1, rhomean, ufmean, vfmean, wfmean, &
+       Rxx, Rxy, Rxz, Ryy, Ryz, Rzz, ta1, tmean)
+
+    USE param
+    USE variables
+    USE decomp_2d
+
+    IMPLICIT NONE
+
+    REAL(mytype), DIMENSION(xsize(1), xsize(2), xsize(3)), INTENT(IN) :: rho1, ux1, uy1, uz1
+    REAL(mytype), DIMENSION(xszS(1), xszS(2), xszS(3)), INTENT(IN) :: rhomean, ufmean, vfmean, wfmean
+    REAL(mytype), DIMENSION(xszS(1), xszS(2), xszS(3)) :: Rxx, Rxy, Rxz, Ryy, Ryz, Rzz, ta1, tmean
+
+    <<src:rstress-prep.f90>>
+    <<src:rstress.f90>>
+  ENDSUBROUTINE calc_rstress
+#+END_SRC
+
+[fn:call-rstress] A call needs to be added to =incompact3d.f90=
+
+**** Energy spectra
+
+Obtained in x and z directions at @@latex:$y = 0$@@ for velocity and temperature.
+
+Somehow Almagro has temperature spectra for case =s1= which doesn't seem to make sense - the
+temperature should be constant.
+
+**** Energy dissipation rate
+
+The dissipation rate of turbulent kinetic energy for variable-density flows is given as
+#+BEGIN_EXPORT latex
+\begin{equation}
+  \begin{split}
+    \overline{\rho}\ \overline{\epsilon} &=
+    \overline{\boldsymbol{\tau}':\boldsymbol{\nabla}\boldsymbol{u}'}\\
+    &=\mu \left( \frac{4}{3} \overline{{\left( \boldsymbol{\nabla} \cdot \boldsymbol{u}' \right)}^2}
+      + \overline{{\left( \boldsymbol{\nabla} \times \boldsymbol{u}' \right)}^2} + 2 \left(
+        \frac{\partial^2 \overline{{u_i}' {u_j}'}}{\partial x_i \partial x_j} - 2
+        \boldsymbol{\nabla} \cdot \overline{\boldsymbol{u}' \boldsymbol{\nabla} \cdot
+          \boldsymbol{u}'}\right)\right)
+  \end{split}
+\end{equation}
+#+END_EXPORT
+where @@latex:$\boldsymbol{u}' = \boldsymbol{u} - \overline{\boldsymbol{u}}$@@ is the
+/Reynolds/-fluctuation of velocity.
+*N.B.* this is the /Reynolds/ dissipation rate according to Chassaing - it may also be of interest to
+record the /Favr\eacute/ dissipation rate
+#+BEGIN_EXPORT latex
+\begin{equation}
+  \overline{\rho}\ \overline{\epsilon}^F = \overline{\boldsymbol{\tau} : \boldsymbol{\nabla}
+    \boldsymbol{u}''} = 2 \mu \left( \overline{\boldsymbol{s}:\boldsymbol{s}''} - \frac{1}{3}
+    \overline{\left(\boldsymbol{\nabla} \cdot \boldsymbol{u} \right) \left(\boldsymbol{\nabla} \cdot
+        \boldsymbol{u}'' \right)} \right)
+\end{equation}
+#+END_EXPORT
+
+To compute the /Reynolds/ dissipation rate, first we apply @@latex:$\overline{\epsilon}\leftarrow\overline{\rho}\
+\overline{\epsilon}$@@ and compute the /Reynolds/ fluctuating velocities
+#+NAME: src:rdiss-prep.f90
+#+BEGIN_SRC f90
+    rdiss(:,:,:) = rhomean(:,:,:) * rdiss(:,:,:)
+    ta1(:,:,:) = ux1(:,:,:) - umean(:,:,:)
+    tb1(:,:,:) = uy1(:,:,:) - vmean(:,:,:)
+    tc1(:,:,:) = uz1(:,:,:) - wmean(:,:,:)
+#+END_SRC
+
+We can then begin computing derivatives for the /Reynolds/-fluctuating viscous stress tensor and
+velocity gradient
+#+NAME: src:rdiss-der.f90
+#+BEGIN_SRC f90
+    !! X-derivatives
+    CALL derx (td1,ta1,di1,sx,ffx,fsx,fwx,xsize(1),xsize(2),xsize(3),0)
+    CALL derx (te1,tb1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1)
+    CALL derx (tf1,tc1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1)
+
+    CALL transpose_x_to_y(ta1, ta2)
+    CALL transpose_x_to_y(tb1, tb2)
+    CALL transpose_x_to_y(tc1, tc2)
+  
+    !! Y-derivatives
+    CALL dery (td2,ta2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1) 
+    CALL dery (te2,tb2,di2,sy,ffy,fsy,fwy,ppy,ysize(1),ysize(2),ysize(3),0)
+    CALL dery (tf2,tc2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1)
+
+    CALL transpose_y_to_z(ta2, ta3)
+    CALL transpose_y_to_z(tb2, tb3)
+    CALL transpose_y_to_z(tc2, tc3)
+
+    !! Z-derivatives
+    CALL derz (td3,ta3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1)
+    CALL derz (te3,tb3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1)
+    CALL derz (tf3,tc3,di3,sz,ffz,fsz,fwz,zsize(1),zsize(2),zsize(3),0)
+#+END_SRC
+
+As we are now in the Z-pencil it is most efficient to then build the double-inner product
+@@latex:$\boldsymbol{\tau}':\boldsymbol{\nabla}\boldsymbol{u}'$@@ backwards:
+#+NAME: src:rdiss-2s:gradu.f90
+#+BEGIN_SRC f90
+  !! Z-pencils
+  !   (dudz + dwdx) * dudz
+  ! + (dvdz + dwdy) * dvdz
+  ! + (dwdz + dwdz) * dwdz
+
+  <<src:wder-to-z.f90>>
+
+  tc3(:,:,:) = (td3(:,:,:) + ta3(:,:,:)) * td3(:,:,:) &
+       + (te3(:,:,:) + tb3(:,:,:)) * te3(:,:,:) &
+       + (tf3(:,:,:) + tf3(:,:,:)) * tf3(:,:,:)
+  CALL transpose_z_to_y(tc3, tc2)
+
+  !! Y-pencils
+  !   (dudy + dvdx) * dudy
+  ! + (dvdy + dvdy) * dvdy
+  ! + (dwdy + dvdz) * dwdy
+
+  <<src:vder-to-y.f90>>
+
+  tb2(:,:,:) = (td2(:,:,:) + ta2(:,:,:)) * td2(:,:,:) &
+       + (te2(:,:,:) + te2(:,:,:)) * te2(:,:,:) &
+       + (tf2(:,:,:) + tb2(:,:,:)) * tf2(:,:,:)
+
+  tb2(:,:,:) = tb2(:,:,:) + tc2(:,:,:)
+  CALL transpose_y_to_x(tb2, ta1)
+
+  !! X-pencils
+  !   (dudx + dudx) * dudx
+  ! + (dvdx + dudy) * dvdx
+  ! + (dwdx + dudz) * dwdx
+
+  <<src:uder-to-x.f90>>
+
+  ta1(:,:,:) = ta1(:,:,:) &
+       + (td1(:,:,:) + td1(:,:,:)) * td1(:,:,:) &
+       + (te1(:,:,:) + tb1(:,:,:)) * te1(:,:,:) &
+       + (tf1(:,:,:) + tc1(:,:,:)) * tf1(:,:,:)
+#+END_SRC
+
+Where we transport already computed derivatives up/down the pencils as required:
+#+NAME: src:wder-to-z
+#+BEGIN_SRC f90
+    CALL transpose_x_to_y(tf1, tc2) ! dwdx, x->y
+
+    CALL transpose_y_to_z(tc2, ta3) ! dwdx, y->z
+    CALL transpose_y_to_z(tf2, tb3) ! dwdy, y->z
+#+END_SRC
+
+#+NAME: src:vder-to-y
+#+BEGIN_SRC f90
+    CALL transpose_x_to_y(te1, ta2) ! dvdx, x->y
+
+    CALL transpose_z_to_y(te3, tb2) ! dvdz, z->y
+#+END_SRC
+
+#+NAME: src:uder-to-x
+#+BEGIN_SRC f90
+    CALL transpose_z_to_y(td3, ta2) ! dudz, z->y
+
+    CALL transpose_y_to_x(td2, tb1) ! dudy, y->x
+    CALL transpose_y_to_x(ta2, tc1) ! dudz, y->x
+#+END_SRC
+
+All that remains is to subtract the divergence of fluctuations term, noting that
+@@latex:$\left(\boldsymbol{\nabla}\cdot\boldsymbol{u}'\right)\boldsymbol{I}:\boldsymbol{\nabla}\boldsymbol{u}'={\left(\boldsymbol{\nabla}\cdot\boldsymbol{u}'\right)}^2$@@
+#+NAME: src:rdiss-divu2.f90
+#+BEGIN_SRC f90
+  CALL transpose_z_to_y(tf3, tf2)
+
+  CALL transpose_y_to_x(te2, te1)
+  CALL transpose_y_to_x(tf2, tf1)
+
+  ta1(:,:,:) = ta1(:,:,:) &
+       - (2._mytype / 3._mytype) * (td1(:,:,:) + te1(:,:,:) + tf1(:,:,:))**2
+#+END_SRC
+
+This can all then be wrapped in a subroutine
+#+BEGIN_SRC f90 :tangle src/rdiss.inc :noweb tangle
+  SUBROUTINE calc_rdiss(ux1, uy1, uz1, rhomean, umean, vmean, wmean, rdiss, &
+       ta1, tb1, tc1, td1, te1, tf1, di1, &
+       ta2, tb2, tc2, td2, te2, tf2, di2, &
+       ta3, tb3, tc3, td3, te3, tf3, di3)
+
+    USE param
+    USE variables
+    USE decomp_2d
+
+    IMPLICIT NONE
+
+    REAL(mytype), DIMENSION(xsize(1), xsize(2), xsize(3)), INTENT(IN) :: ux1, uy1, uz1, &
+         rhomean, umean, vmean, wmean
+    REAL(mytype), DIMENSION(xsize(1), xsize(2), xsize(3)) :: ta1, tb1, tc1, td1, te1, tf1, di1
+    REAL(mytype), DIMENSION(ysize(1), ysize(2), ysize(3)) :: ta2, tb2, tc2, td2, te2, tf2, di2
+    REAL(mytype), DIMENSION(zsize(1), zsize(2), zsize(3)) :: ta3, tb3, tc3, td3, te3, tf3, di3
+    REAL(mytype), DIMENSION(xsize(1), xsize(2), xsize(3)) :: rdiss
+
+    <<src:rdiss-prep.f90>>
+    <<src:rdiss-grad.f90>>
+    <<src:rdiss-2d:gradu.f90>>
+    <<src:rdiss-divu2.f90>>
+
+    !! Update dissipation
+    rdiss(:,:,:) = (rdiss(:,:,:) + xnu * ta1(:,:,:)) / rhomean(:,:,:)
+  ENDSUBROUTINE calc_rdiss
+#+END_SRC
+
+**** Mixing layer thickness
+
+The momentum thickness, defined as
+#+BEGIN_EXPORT latex
+\begin{equation}
+  \delta_m = \frac{1}{\rho_0 \Delta u^2} \int^{\infty}_{-\infty} \overline{\rho} \left( \frac{1}{2}
+    \Delta{}u - U \right) \left( \frac{1}{2} \Delta{}u + U \right) dy
+\end{equation}
+#+END_EXPORT
+and the vorticity thickness
+#+BEGIN_EXPORT latex
+\begin{equation}
+  \delta_{\omega} = \frac{\Delta{}u}{\left| \partial U / \partial y \right|_{max}}
+\end{equation}
+#+END_EXPORT
+are recorded as functions of time.
+
+To compute the momentum thickness we first average in the stream and spanwise directions
+#+NAME: src:momthick-homoavg.f90
+#+BEGIN_SRC f90
+  !! First compute the 3D field
+  if (ilmn.ne.0) then
+     ta1(:,:,:) = rhomean(:,:,:) * (0.5_mytype * (u1 - u2) - ufmean(:,:,:) / REAL(itime, mytype)) &
+          ,* (0.5_mytype * (u1 - u2) + ufmean(:,:,:) / REAL(itime, mytype))
+  else
+     ta1(:,:,:) = (0.5_mytype * (u1 - u2) - ufmean(:,:,:) / REAL(itime, mytype)) &
+          ,* (0.5_mytype * (u1 - u2) + ufmean(:,:,:) / REAL(itime, mytype))
+  endif
+
+  print *, MAXVAL(ta1), MINVAL(ta1)
+
+  !! Now average in X
+  DO i = 2, xsize(1)
+     ta1(1,:,:) = ta1(1,:,:) + ta1(i,:,:)
+  ENDDO
+  ta1(1,:,:) = ta1(1,:,:) / REAL(nx, mytype)
+  DO i = 2, xsize(1)
+     ta1(i,:,:) = ta1(1,:,:)
+  ENDDO
+
+  !! Get to Z
+  CALL transpose_x_to_y(ta1, ta2)
+  CALL transpose_y_to_z(ta2, ta3)
+
+  !! Now average in Z
+  DO k = 2, zsize(3)
+     ta3(:,:,1) = ta3(:,:,1) + ta3(:,:,k)
+  ENDDO
+  ta3(:,:,1) = ta3(:,:,1) / REAL(nz, mytype)
+  DO k = 2, zsize(3)
+     ta3(:,:,k) = ta3(:,:,1)
+  ENDDO
+#+END_SRC
+ending up in the z-pencils.
+We then integrate in y and divide by @@latex:$\rho_{0}\Delta{}u^{2}$@@
+#+NAME: src:momthick-yint.f90
+#+BEGIN_SRC f90
+  !! First, get from Z to Y
+  CALL transpose_z_to_y(ta3, ta2)
+
+  !! Now integrate
+  deltam = 0._mytype
+
+  DO j = 1, ysize(2) - 1
+     deltam = deltam + (ta2(1, j, 1) + ta2(1, j + 1, 1)) * (dy / 2._mytype)
+  ENDDO
+  deltam = deltam / (((dens1 + dens2) / 2._mytype) * (u1 - u2)**2)
+#+END_SRC
+
+Computation of the vorticity thickness is relatively straight-forward - first compute the gradient
+of U wrt y:
+#+NAME: src:vortthick-dudy.f90
+#+BEGIN_SRC f90
+  !! Get Favre-avg u to Y
+  CALL transpose_x_to_y(ufmean, tb2)
+
+  !! Compute dUdy
+  call dery (ta2,tb2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1) 
+#+END_SRC
+followed by identification of the maximum and definition of the vorticity thickness
+#+NAME: src:vortthick.f90
+#+BEGIN_SRC f90
+  !! Find (local) maximum of |dUdy|
+  maxloc = MAX(MAXVAL(ta2), -MINVAL(ta2)) / REAL(itime, mytype)
+
+  !! Find the (global) maximum of |dUdy|
+  CALL MPI_ALLREDUCE(maxloc, maxglob, 1, real_type, MPI_MAX, MPI_COMM_WORLD, ierr)
+
+  !! Compute deltaw
+  deltaw = (u1 - u2) / maxglob
+#+END_SRC
+
+We can then build this into a routine to calculate (and print) the mixing layer thickness
+#+BEGIN_SRC f90 :tangle src/thickness.inc :noweb tangle
+  SUBROUTINE calc_thickness(rhomean, ufmean, ta1, ta2, tb2, di2, ta3)
+
+    USE MPI
+    USE param
+    USE variables
+    USE decomp_2d
+
+    IMPLICIT NONE
+
+    REAL(mytype), DIMENSION(xsize(1), xsize(2), xsize(3)), INTENT(IN) :: rhomean, ufmean
+    REAL(mytype), DIMENSION(xsize(1), xsize(2), xsize(3)) :: ta1
+    REAL(mytype), DIMENSION(ysize(1), ysize(2), ysize(3)) :: ta2, tb2, di2
+    REAL(mytype), DIMENSION(zsize(1), zsize(2), zsize(3)) :: ta3
+
+    REAL(mytype) :: maxloc, maxglob
+    REAL(mytype) :: deltam, deltaw
+
+    INTEGER :: i, j, k
+    INTEGER :: ierr
+    LOGICAL :: file_exists
+
+    <<src:momthick-homoavg.f90>>
+    <<src:momthick-yint.f90>>
+    <<src:vortthick-dudy.f90>>
+    <<src:vortthick.f90>>
+
+    !! Write out
+    IF (nrank.EQ.0) THEN
+       INQUIRE(FILE="thickness.log", EXIST=file_exists)
+       IF (file_exists) THEN
+          OPEN(30, FILE="thickness.log", STATUS="old", ACTION="write", POSITION="append")
+       ELSE
+          OPEN(30, FILE="thickness.log", STATUS="new", ACTION="write")
+          WRITE(30, *) "ITIME deltam deltaw"
+       ENDIF
+       WRITE(30, 9000) itime, deltam, deltaw
+  9000 FORMAT(" ", I8, E15.7, E15.7)
+       CLOSE(30)
+    ENDIF
+
+  ENDSUBROUTINE calc_thickness
+#+END_SRC
+
+**** Calling postprocessing
+
+Finally, we must call these postprocessing routines from the main program:
+#+BEGIN_SRC f90 :tangle src/postproc-call.inc
+    if (ilmn.ne.0) then
+       call calc_rstress(rho1, ux1, uy1, uz1, rhomean, ufmean, vfmean, wfmean, &
+            Rxx, Rxy, Rxz, Ryy, Ryz, Rzz, ta1, tmean)
+    else
+       call calc_rstress(rho1, ux1, uy1, uz1, rhomean, umean, vmean, wmean, &
+            Rxx, Rxy, Rxz, Ryy, Ryz, Rzz, ta1, tmean)
+    endif
+    call calc_rdiss(ux1, uy1, uz1, rhomean, umean, vmean, wmean, rdiss, &
+         ta1, tb1, tc1, td1, te1, tf1, di1, &
+         ta2, tb2, tc2, td2, te2, tf2, di2, &
+         ta3, tb3, tc3, td3, te3, tf3, di3)
+    if (ilmn.ne.0) then
+       call calc_thickness(rhomean, ufmean, ta1, ta2, tb2, di2, ta3)
+    else
+       call calc_thickness(rhomean, umean, ta1, ta2, tb2, di2, ta3)
+    endif
+#+END_SRC
+*** incompact3d.prm
+
+An =incompact3d.prm-s*= is generated automatically for each case by tangling this file.
+For reference, that for case =s1= is shown.
+
+#+CAPTION: Case s1 incompact3d.prm
+#+NAME: src:incompact3d.prm-s1 
+#+BEGIN_SRC text :noweb yes :tangle incompact3d.prm-s1
+  <<src:header.prm>>
+  <<src:domain.prm>>
+  <<src:fluid-props.prm>>
+  <<src:froude.prm>>
+  <<src:velocity.prm>>
+  <<src:rho.prm-s1>>
+  <<src:noise.prm>>
+  <<src:timestep.prm>>
+  <<src:flowheader.prm>>
+  <<src:bcs.prm>>
+  <<src:init-type.prm>>
+  <<src:nsteps.prm>>
+  <<src:integrator.prm>>
+  <<src:mesh-stretch.prm>>
+  <<src:lmn-s1.prm>>
+  <<src:advmom.prm>>
+  <<src:varprop.prm>>
+  <<src:scalar.prm>>
+  <<src:fileheader.prm>>
+  <<src:restart.prm>>
+  <<src:output.prm>>
+  <<src:ibm.prm>>
+#+END_SRC
+
+#+NAME: src:incompact3d.prm-s2
+#+BEGIN_SRC text :noweb yes :tangle incompact3d.prm-s2 :exports none
+  <<src:header.prm>>
+  <<src:domain.prm>>
+  <<src:fluid-props.prm>>
+  <<src:froude.prm>>
+  <<src:velocity.prm>>
+  <<src:rho.prm-s2>>
+  <<src:noise.prm>>
+  <<src:timestep.prm>>
+  <<src:flowheader.prm>>
+  <<src:bcs.prm>>
+  <<src:init-type.prm>>
+  <<src:nsteps.prm>>
+  <<src:integrator.prm>>
+  <<src:mesh-stretch.prm>>
+  <<src:lmn-s24.prm>>
+  <<src:advmom.prm>>
+  <<src:varprop.prm>>
+  <<src:scalar.prm>>
+  <<src:fileheader.prm>>
+  <<src:restart.prm>>
+  <<src:output.prm>>
+  <<src:ibm.prm>>
+#+END_SRC
+
+#+NAME: src:incompact3d.prm-s4
+#+BEGIN_SRC text :noweb yes :tangle incompact3d.prm-s4 :exports none
+  <<src:header.prm>>
+  <<src:domain.prm>>
+  <<src:fluid-props.prm>>
+  <<src:froude.prm>>
+  <<src:velocity.prm>>
+  <<src:rho.prm-s4>>
+  <<src:noise.prm>>
+  <<src:timestep.prm>>
+  <<src:flowheader.prm>>
+  <<src:bcs.prm>>
+  <<src:init-type.prm>>
+  <<src:nsteps.prm>>
+  <<src:integrator.prm>>
+  <<src:mesh-stretch.prm>>
+  <<src:lmn-s24.prm>>
+  <<src:advmom.prm>>
+  <<src:varprop.prm>>
+  <<src:scalar.prm>>
+  <<src:fileheader.prm>>
+  <<src:restart.prm>>
+  <<src:output.prm>>
+  <<src:ibm.prm>>
+#+END_SRC
+
+#+NAME: src:incompact3d.prm-s8
+#+BEGIN_SRC text :noweb yes :tangle incompact3d.prm-s8 :exports none
+  <<src:header.prm>>
+  <<src:domain.prm>>
+  <<src:fluid-props.prm>>
+  <<src:froude.prm>>
+  <<src:velocity.prm>>
+  <<src:rho.prm-s8>>
+  <<src:noise.prm>>
+  <<src:timestep.prm>>
+  <<src:flowheader.prm>>
+  <<src:bcs.prm>>
+  <<src:init-type.prm>>
+  <<src:nsteps.prm>>
+  <<src:integrator.prm>>
+  <<src:mesh-stretch.prm>>
+  <<src:lmn-s8.prm>>
+  <<src:advmom.prm>>
+  <<src:varprop.prm>>
+  <<src:scalar.prm>>
+  <<src:fileheader.prm>>
+  <<src:restart.prm>>
+  <<src:output.prm>>
+  <<src:ibm.prm>>
+#+END_SRC
+
+*** Misc                                                         :noexport:
+
+These are required for the ~.prm~ files but are of no interest to this case
+
+#+NAME: src:header.prm
+#+BEGIN_SRC text
+  #
+  # INCOMPACT 3D Flow parameters 
+  #
+#+END_SRC
+
+#+NAME: src:flowheader.prm
+#+BEGIN_SRC text
+  #
+  # INCOMPACT3D Flow configuration
+  #
+#+END_SRC
+
+#+NAME:src:fileheader.prm
+#+BEGIN_SRC text
+  #
+  # INCOMPACT 3D File parameters 
+  #
+#+END_SRC
+
+#+NAME: src:ibm.prm
+#+BEGIN_SRC text
+  #
+  # INCOMPACT 3D Body  old school
+  #
+  0     #ivirt# IBM? (1: old school, 2: Lagrangian Poly)
+  5.    #cex  # X-centre position of the solid body
+  6.    #cey  # Y-centre position of the solid body
+  0.    #cez  # Z-centre position of the solid body
+  0.5   #re   # Radius of the solid body
+  #
+#+END_SRC
+
+* Validation
+
+** Of the @@latex:$\boldsymbol{\nabla}q$@@ solver
+
+* Results
+
+* Log
+
+** 2018-12-12 Wednesday
+
+Added code to collect Reynolds-averaged density and Favr\eacute-averaged velocity
