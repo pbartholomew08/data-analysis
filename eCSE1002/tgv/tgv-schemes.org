@@ -39,3 +39,7 @@ The parameters ~fpi2~ and ~ailcaix6~ typically take one of two values: $\nicefra
 
 
 [fn:ailcaixyz6] The parameters ~ailcaiy6~ and ~ailcaiz6~ are set equal to ~ailcaix6~.
+
+* Postprocessing
+
+The data are stored in the ~OUTPUT.log~ files in the form
