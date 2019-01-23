@@ -246,7 +246,7 @@ we want to load
       "name": "rho",
       "description": "Instantaneous density",
       "properties": {
-        "filename": "/home/paul/DATA/incompact3d-lmn/golanski_mixinglayer2d/DATA/test_lamballais/e8/rho",
+        "filename": "/home/paul/DATA/incompact3d-lmn/golanski_mixinglayer2d/DATA/test_lamballais/e1/rho",
         "direction": [0]
       }
     }
@@ -282,9 +282,9 @@ At each time, we load the data, compute the contours and save the contour plot
   cs = plt.contour(X, Y, postprocess.fields["rho"].data[t][:,:,0],
                    contours,
                    colors="r")
-  filename = "e8-t" + str(t) + ".eps"
+  filename = "e1-t" + str(t) + ".eps"
   plt.savefig(filename)
-  filename = "e8-t" + str(t) + ".png"
+  filename = "e1-t" + str(t) + ".png"
   plt.savefig(filename)
   plt.close
 
@@ -297,7 +297,7 @@ The Golanski data is plotted by:
 #+BEGIN_SRC python
   x = []
   y = []
-  with open("./golanski2005.csv", "r") as csvfile:
+  with open("./golanski2005-rho-t24.csv", "r") as csvfile:
     # # Skip first two rows (headers)
     # next(csvfile)
     # next(csvfile)
@@ -334,7 +334,7 @@ This all comes together in the following script:
   <<src:postproc>>
   <<src:coord>>
 
-  t = 182
+  t = 24
   <<src:contour>>
 #+END_SRC
 
@@ -368,20 +368,6 @@ This all comes together in the following script:
     \caption{e6}
   \end{subfigure}
   \caption{Comparison of results using skew-symmetric formulation with Golanski2005}
-\end{figure}
-#+END_EXPORT
-#+BEGIN_EXPORT latex
-\begin{figure}[h]
-  \centering
-  \begin{subfigure}[b]{0.3\textwidth}
-    \includegraphics[height=0.45\textheight]{e7-t182}
-    \caption{e7}
-  \end{subfigure}
-  \begin{subfigure}[b]{0.3\textwidth}
-    \includegraphics[height=0.45\textheight]{e8-t182}
-    \caption{e8}
-  \end{subfigure}
-  \caption{Comparison of results using conservative formulation with Golanski2005}
 \end{figure}
 #+END_EXPORT
 
