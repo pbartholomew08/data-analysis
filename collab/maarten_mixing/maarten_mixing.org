@@ -672,6 +672,7 @@ Currently there is no function to compute the Reynolds stresses so we define one
     USE param
     USE variables
     USE decomp_2d
+    USE decomp_2d_io
 
     IMPLICIT NONE
 
@@ -681,7 +682,24 @@ Currently there is no function to compute the Reynolds stresses so we define one
 
     <<src:rstress-prep.f90>>
     <<src:rstress.f90>>
+    <<src:rstress-write.f90>>
   ENDSUBROUTINE calc_rstress
+#+END_SRC
+
+Like the ~STATISTIC~ routine, this and other postprocessing routines defined here output every ~isave~
+timesteps:
+#+NAME: src:rstress-write.f90
+#+BEGIN_SRC f90
+    if (mod(itime,isave)==0) then
+       call decomp_2d_write_one(1, Rxx, "Rxx.dat", 1)
+       call decomp_2d_write_one(1, Rxy, "Rxy.dat", 1)
+       call decomp_2d_write_one(1, Rxz, "Rxz.dat", 1)
+     
+       call decomp_2d_write_one(1, Ryy, "Ryy.dat", 1)
+       call decomp_2d_write_one(1, Ryz, "Ryz.dat", 1)
+     
+       call decomp_2d_write_one(1, Rzz, "Rzz.dat", 1)
+    endif
 #+END_SRC
 
 [fn:call-rstress] A call needs to be added to =incompact3d.f90=
