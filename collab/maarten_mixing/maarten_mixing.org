@@ -910,20 +910,18 @@ To compute the momentum thickness we first average in the stream and spanwise di
 #+BEGIN_SRC f90
   !! First compute the 3D field
   if (ilmn.ne.0) then
-     ta1(:,:,:) = rhomean(:,:,:) * (0.5_mytype * (u1 - u2) - ufmean(:,:,:) / REAL(itime, mytype)) &
-          ,* (0.5_mytype * (u1 - u2) + ufmean(:,:,:) / REAL(itime, mytype))
+     ta1(:,:,:) = rhomean(:,:,:) * (0.5_mytype * du - ufmean(:,:,:) / REAL(itime, mytype)) &
+          ,* (0.5_mytype * du + ufmean(:,:,:) / REAL(itime, mytype))
   else
-     ta1(:,:,:) = (0.5_mytype * (u1 - u2) - ufmean(:,:,:) / REAL(itime, mytype)) &
-          ,* (0.5_mytype * (u1 - u2) + ufmean(:,:,:) / REAL(itime, mytype))
+     ta1(:,:,:) = (0.5_mytype * du - ufmean(:,:,:) / REAL(itime, mytype)) &
+          ,* (0.5_mytype * du + ufmean(:,:,:) / REAL(itime, mytype))
   endif
-
-  print *, MAXVAL(ta1), MINVAL(ta1)
 
   !! Now average in X
   DO i = 2, xsize(1)
      ta1(1,:,:) = ta1(1,:,:) + ta1(i,:,:)
   ENDDO
-  ta1(1,:,:) = ta1(1,:,:) / REAL(nx, mytype)
+  ta1(1,:,:) = ta1(1,:,:) / REAL(xsize(1), mytype)
   DO i = 2, xsize(1)
      ta1(i,:,:) = ta1(1,:,:)
   ENDDO
@@ -936,7 +934,7 @@ To compute the momentum thickness we first average in the stream and spanwise di
   DO k = 2, zsize(3)
      ta3(:,:,1) = ta3(:,:,1) + ta3(:,:,k)
   ENDDO
-  ta3(:,:,1) = ta3(:,:,1) / REAL(nz, mytype)
+  ta3(:,:,1) = ta3(:,:,1) / REAL(zsize(3), mytype)
   DO k = 2, zsize(3)
      ta3(:,:,k) = ta3(:,:,1)
   ENDDO
@@ -954,15 +952,35 @@ We then integrate in y and divide by @@latex:$\rho_{0}\Delta{}u^{2}$@@
   DO j = 1, ysize(2) - 1
      deltam = deltam + (ta2(1, j, 1) + ta2(1, j + 1, 1)) * (dy / 2._mytype)
   ENDDO
-  deltam = deltam / (((dens1 + dens2) / 2._mytype) * (u1 - u2)**2)
+  deltam = deltam / (((dens1 + dens2) / 2._mytype) * du**2)
 #+END_SRC
 
 Computation of the vorticity thickness is relatively straight-forward - first compute the gradient
 of U wrt y:
 #+NAME: src:vortthick-dudy.f90
 #+BEGIN_SRC f90
-  !! Get Favre-avg u to Y
-  CALL transpose_x_to_y(ufmean, tb2)
+  !! Get Favre-avg u to Y (averaged in X and Z)
+  ta1(1,:,:) = ufmean(1,:,:)
+  DO i = 2, xsize(1)
+     ta1(1,:,:) = ta1(1,:,:) + ufmean(i,:,:)
+  ENDDO
+  ta1(1,:,:) = ta1(1,:,:) / REAL(xsize(1), mytype)
+  DO i = 2, xsize(1)
+     ta1(i,:,:) = ta1(1,:,:)
+  ENDDO
+
+  CALL transpose_x_to_y(ta1, tb2)
+  CALL transpose_y_to_z(tb2, ta3)
+
+  DO k = 2, zsize(3)
+     ta3(:,:,1) = ta3(:,:,1) + ta3(:,:,k)
+  ENDDO
+  ta3(1,:,:) = ta3(1,:,:) / REAL(zsize(3), mytype)
+  DO k = 2, zsize(3)
+  ta3(:,:,k) = ta3(:,:,1)
+  ENDDO
+
+  CALL transpose_z_to_y(ta3, tb2)
 
   !! Compute dUdy
   call dery (ta2,tb2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1) 
@@ -977,7 +995,7 @@ followed by identification of the maximum and definition of the vorticity thickn
   CALL MPI_ALLREDUCE(maxloc, maxglob, 1, real_type, MPI_MAX, MPI_COMM_WORLD, ierr)
 
   !! Compute deltaw
-  deltaw = (u1 - u2) / maxglob
+  deltaw = du / maxglob
 #+END_SRC
 
 We can then build this into a routine to calculate (and print) the mixing layer thickness
@@ -996,6 +1014,7 @@ We can then build this into a routine to calculate (and print) the mixing layer 
     REAL(mytype), DIMENSION(ysize(1), ysize(2), ysize(3)) :: ta2, tb2, di2
     REAL(mytype), DIMENSION(zsize(1), zsize(2), zsize(3)) :: ta3
 
+    REAL(mytype) :: du
     REAL(mytype) :: maxloc, maxglob
     REAL(mytype) :: deltam, deltaw
 
@@ -1003,6 +1022,8 @@ We can then build this into a routine to calculate (and print) the mixing layer 
     INTEGER :: ierr
     LOGICAL :: file_exists
 
+    du = ABS(u1 - u2)
+  
     <<src:momthick-homoavg.f90>>
     <<src:momthick-yint.f90>>
     <<src:vortthick-dudy.f90>>
