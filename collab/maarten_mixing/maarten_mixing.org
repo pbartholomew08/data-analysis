@@ -879,6 +879,10 @@ This can all then be wrapped in a subroutine
     REAL(mytype), DIMENSION(zsize(1), zsize(2), zsize(3)) :: ta3, tb3, tc3, td3, te3, tf3, di3
     REAL(mytype), DIMENSION(xsize(1), xsize(2), xsize(3)) :: rdiss
 
+    INTEGER :: i, j, k
+    REAL(mytype) :: rint
+    LOGICAL :: file_exists
+
     <<src:rdiss-prep.f90>>
     <<src:rdiss-grad.f90>>
     <<src:rdiss-2d:gradu.f90>>
