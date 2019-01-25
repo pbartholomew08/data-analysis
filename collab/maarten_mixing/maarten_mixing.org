@@ -889,7 +889,54 @@ This can all then be wrapped in a subroutine
 
     !! Save field
     CALL decomp_2d_write_one(1, rdiss, "dissipation.dat", 1)
+
+    <<src:rdiss-avg.f90>>
   ENDSUBROUTINE calc_rdiss
+#+END_SRC
+
+Apart from the 3D field, we also want to know the vertical integral of the dissipation rate:
+#+NAME: src:rdiss-avg.f90
+#+BEGIN_SRC f90
+    !! Average in x
+    ta1(:,:,:) = rdiss(:,:,:)
+    do i = 2, xsize(1)
+       ta1(1,:,:) = ta1(1,:,:) + ta1(i,:,:)
+    enddo
+    ta1(1,:,:) = ta1(1,:,:) / real(xsize(1), mytype)
+    do i = 2, xsize(1)
+       ta1(i,:,:) = ta1(1,:,:)
+    enddo
+
+    call transpose_x_to_y(ta1, ta2)
+    call transpose_y_to_z(ta2, ta3)
+
+    do k = 2, zsize(3)
+       ta3(:,:,1) = ta3(:,:,1) + ta3(:,:,k)
+    enddo
+    ta3(:,:,1) = ta3(:,:,1) / real(zsize(3), mytype)
+    do k = 2, zsize(3)
+       ta3(:,:,k) = ta3(:,:,1)
+    enddo
+
+    call transpose_z_to_y(ta3, ta2)
+
+    rint = 0._mytype
+    do j = 1, ysize(2)
+       rint = rint + ta2(1,j,1)
+    enddo
+
+    if (nrank.eq.0) then
+       inquire(FILE="dissipation.log", EXIST=file_exists)
+       if (file_exists) then
+          open(1234, FILE="dissipation.log", STATUS="old", ACTION="write", POSITION="append")
+       else
+          open(1234, FILE="dissipation.log", STATUS="new", ACTION="write")
+          write(1234, *) "ITIME dissipation"
+       endif
+       write(1234, 9123) itime, rint
+  9123 format(" ", I8, E15.7)
+       close(1234)
+    endif
 #+END_SRC
 
 **** Mixing layer thickness
