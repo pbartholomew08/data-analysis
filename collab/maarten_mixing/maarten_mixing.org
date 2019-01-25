@@ -868,6 +868,7 @@ This can all then be wrapped in a subroutine
     USE param
     USE variables
     USE decomp_2d
+    USE decomp_2d_io
 
     IMPLICIT NONE
 
@@ -885,6 +886,9 @@ This can all then be wrapped in a subroutine
 
     !! Update dissipation
     rdiss(:,:,:) = (rdiss(:,:,:) + xnu * ta1(:,:,:)) / rhomean(:,:,:)
+
+    !! Save field
+    CALL decomp_2d_write_one(1, rdiss, "dissipation.dat", 1)
   ENDSUBROUTINE calc_rdiss
 #+END_SRC
 
