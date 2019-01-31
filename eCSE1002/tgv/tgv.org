@@ -86,7 +86,7 @@ to be plotted (line style, markers /etc./)
 #+BEGIN_SRC python :noweb strip-export
   case_root = os.path.expanduser("~/DATA/incompact3d-lmn/taylorgreen-3d")
   jammy_dat = "jammy2016-512.dat"
-  lamballais_dat = "TGV_Re1600.dat"
+  lamballais_dat = "TGV_Re1600-512.dat"
 
   RUNS=["i3d",
         "i3d-lmn-cc",
@@ -129,7 +129,7 @@ to be plotted (line style, markers /etc./)
        RUNS[3]:"LMN-IC",
        RUNS[4]:"I3D-ailcaix6-310",
        RUNS[5]:"LMN-VC-257"}
-  NOPLT=[RUNS[3]] # Add keys not to plot
+  NOPLT=[RUNS[3], RUNS[4], RUNS[5]] # Add keys not to plot
 #+END_SRC
 
 #+RESULTS: env
@@ -216,7 +216,7 @@ The business end: using the above, generate a plot of the evolution of kinetic e
 
   # Plot Jammy reference KE
   plt.plot(t_ref, ke_ref, label="Jammy", color="black")
-  plt.plot(t_lamb, ke_lamb, label="Lamballais", color="orange")
+  plt.plot(t_lamb, ke_lamb, label="Dairay", color="orange")
 
   # Read and plot data from (Quas)Incompact3D
   for run in RUNS:
@@ -278,7 +278,7 @@ The business end: using the above, generate a plot of the evolution of enstrophy
 
   # Plot Jammy reference enstrophy
   plt.plot(t_ref, enst_ref, label="Jammy", color="black")
-  plt.plot(t_lamb, enst_lamb, label="Lamballais", color="orange")
+  plt.plot(t_lamb, enst_lamb, label="Dairay", color="orange")
 
   # Read and plot data from (Quas)Incompact3D
   for run in RUNS:
