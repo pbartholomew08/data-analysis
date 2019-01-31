@@ -246,7 +246,7 @@ we want to load
       "name": "rho",
       "description": "Instantaneous density",
       "properties": {
-        "filename": "/home/paul/DATA/incompact3d-lmn/golanski_mixinglayer2d/DATA/test_lamballais/e1/rho",
+        "filename": "/home/paul/DATA/incompact3d-lmn/golanski_mixinglayer2d/DATA/test_lamballais/e1g/rho",
         "direction": [0]
       }
     }
@@ -282,9 +282,9 @@ At each time, we load the data, compute the contours and save the contour plot
   cs = plt.contour(X, Y, postprocess.fields["rho"].data[t][:,:,0],
                    contours,
                    colors="r")
-  filename = "e1-t" + str(t) + ".eps"
+  filename = "e1g-t" + str(t) + ".eps"
   plt.savefig(filename)
-  filename = "e1-t" + str(t) + ".png"
+  filename = "e1g-t" + str(t) + ".png"
   plt.savefig(filename)
   plt.close
 
@@ -297,7 +297,7 @@ The Golanski data is plotted by:
 #+BEGIN_SRC python
   x = []
   y = []
-  with open("./golanski2005-rho-t24.csv", "r") as csvfile:
+  with open("./golanski2005-rho-t182.csv", "r") as csvfile:
     # # Skip first two rows (headers)
     # next(csvfile)
     # next(csvfile)
@@ -334,11 +334,13 @@ This all comes together in the following script:
   <<src:postproc>>
   <<src:coord>>
 
-  t = 24
+  t = 182
   <<src:contour>>
 #+END_SRC
 
 #+RESULTS:
+
+and is shown in /fig./\nbsp\ref{fig:comp}.
 
 #+BEGIN_EXPORT latex
 \begin{figure}[h]
@@ -367,9 +369,32 @@ This all comes together in the following script:
     \includegraphics[height=0.45\textheight]{e6-t182}
     \caption{e6}
   \end{subfigure}
-  \caption{Comparison of results using skew-symmetric formulation with Golanski2005}
+  \caption{Comparison of results using skew-symmetric formulation with Golanski2005.
+  Solid red lines indicate currently obtained results and black dots represent data of
+  Golanski2005.}\label{fig:comp}
 \end{figure}
 #+END_EXPORT
+
+** Testing extrapolation of ${\boldsymbol{\nabla}\cdot\rho\boldsymbol{u}}^{n+1}$
+
+In Golanski2005 it outlines how to extrapolate ${\boldsymbol{\nabla}\cdot\rho\boldsymbol{u}}^{n+1}$ for the RK3 as
+(Eq. (89) in Golanski2005)
+\begin{equation}
+  \label{eq:extrapol-golanski}
+  \left. \frac{\partial \rho}{\partial t} \right|^{k+1} = \left( 1 + \sum^k_{l=1} \gamma_k \right)
+  F^n_{\rho} - \sum^k_{l=1} \gamma_k F^{n-1}_{\rho} + \mathcal{O} \left( {\Delta t}^2 \right) \ ,
+\end{equation}
+where superscript $k$ is the sub timestep and $n$ is the full timestep $t^n = n\Delta{}t$.
+However, I think that $\gamma_k$ should read $\gamma_l$ (all the results above were obtained on this basis).
+To test this I have rerun case =e1= using Eq.\nbsp(\ref{eq:extrapol-golanski}) as written, obtaining the
+following result at $t=182$ shown in /fig./\nbsp[[fig:golanski-extrapol]].
+The results show considerably worse agreement with the reference data and, based on this comparison,
+I believe that \gamma_k is a typo in the manuscript whilst the code used by Golanski2005 implements \gamma_l.
+
+#+NAME: fig:golanski-extrapol
+#+CAPTION: Comparison of results using skew-symmetric formulation and Eq.\nbsp(\ref{eq:extrapol-golanski}) to extrapolate $\boldsymbol{\nabla}\cdot{\left(\rho \boldsymbol{u}\right)}^{n+1}$. Red lines indicate present results, black dots those of Golanski2005.
+#+ATTR_LATEX: :height 0.45\textheight
+[[file:e1g-t182.eps]]
 
 * File options                                                     :noexport:
 
