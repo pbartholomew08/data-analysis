@@ -381,13 +381,65 @@ transpose_z_to_y.f90,471
   subroutine mem_merge_zy_complex(480,11662
 
 variables.f90,36
-  subroutine init_variables94,4307
+  subroutine init_variables93,4196
 
 visu.f90,126
 subroutine VISU_INSTB 35,1716
 subroutine VISU_INSTA 131,5167
 subroutine STATISTIC(295,11274
-subroutine VISU_PRE 430,15572
+subroutine VISU_PRE 408,14804
+
+fluct-init.inc,91
+call 2,26
+call 3,56
+call 4,84
+call 6,153
+call 7,177
+call 8,201
+do 11,261
+do 22,579
+
+mean-init.inc,8
+DO 1,0
+
+newvar-alloc.inc,8
+if 1,0
+
+postproc-call.inc,31
+if 1,0
+call 8,282
+if 12,476
+
+rdiss.inc,39
+SUBROUTINE 1,0
+ENDSUBROUTINE 35,1214
+
+rho-uf-mean.inc,8
+if 1,0
+
+rstress.inc,39
+SUBROUTINE 1,0
+ENDSUBROUTINE 48,1922
+
+thickness.inc,39
+SUBROUTINE 1,0
+ENDSUBROUTINE 92,2655
+
+newvar-dec.inc,0
+
+mesh.inc,0
+
+m6.inc,0
+
+m5.inc,0
+
+m4.inc,0
+
+m3.inc,0
+
+m2.inc,0
+
+m1.inc,0
 
 stat.f90,0
 

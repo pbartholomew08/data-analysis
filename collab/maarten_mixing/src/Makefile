@@ -9,7 +9,7 @@
 # m4 256x257x128
 # m5 512x513x256
 # m6 1024x1025x512
-MESH = m1
+MESH = m4
 
 # Choose pre-processing options
 #   -DSHM	   - enable shared-memory implementation
