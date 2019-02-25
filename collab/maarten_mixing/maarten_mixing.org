@@ -525,24 +525,19 @@ The variables for post-processing must all be defined:
 #+END_SRC
 and allocated:
 #+BEGIN_SRC f90 :tangle src/newvar-alloc.inc
-    if (ilmn.ne.0) then
-       allocate(rhomean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-       allocate(ufmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-       allocate(vfmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-       allocate(wfmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-    else
-       allocate(rhomean(1, 1, 1))
-       allocate(ufmean(1, 1, 1))
-       allocate(vfmean(1, 1, 1))
-       allocate(wfmean(1, 1, 1))
-    endif
-    allocate(Rxx(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-    allocate(Rxy(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-    allocate(Rxz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-    allocate(Ryy(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-    allocate(Ryz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-    allocate(Rzz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
-    allocate(rdiss(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  !! Just allocate everything - we probably shouldn't do this for incompressible...
+  allocate(rhomean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(ufmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(vfmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(wfmean(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+
+  allocate(Rxx(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(Rxy(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(Rxz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(Ryy(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(Ryz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(Rzz(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
+  allocate(rdiss(xstS(1):xenS(1), xstS(2):xenS(2), xstS(3):xenS(3)))
 #+END_SRC
 note that to save space we have exploited symmetry of the Reynolds stress tensor.
 **** Reynolds-averaged density
@@ -603,6 +598,8 @@ so that the entire computation of @@latex:$\overline{\rho}$@@ and @@latex:$\bold
      <<src:ufmean-prep.f90>>
      <<src:rhomean.f90>>
      <<src:ufmean.f90>>
+  else
+     rhomean(:,:,:) = 1._mytype
   endif
 #+END_SRC
 
@@ -860,6 +857,7 @@ All that remains is to subtract the divergence of fluctuations term, noting that
 
 This can all then be wrapped in a subroutine
 #+BEGIN_SRC f90 :tangle src/rdiss.inc :noweb tangle
+  !! -*- mode: f90 -*-
   SUBROUTINE calc_rdiss(ux1, uy1, uz1, rhomean, umean, vmean, wmean, rdiss, &
        ta1, tb1, tc1, td1, te1, tf1, di1, &
        ta2, tb2, tc2, td2, te2, tf2, di2, &
