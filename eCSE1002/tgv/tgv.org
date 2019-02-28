@@ -93,13 +93,17 @@ to be plotted (line style, markers /etc./)
         "i3d-lmn-vc",
         "i3d-lmn-ic",
         "i3d-ailcaix6-310",
-        "i3d-lmn-vc-257"]
+        "i3d-lmn-vc-257",
+        "x3d"
+  ]
   FP={RUNS[0]:"I3D-128",
       RUNS[1]:"I3D-LMNCC-128",
       RUNS[2]:"I3D-LMNVC-128",
       RUNS[3]:"I3D-LMNIC-128",
       RUNS[4]:"I3D-128-ailcaix6-310",
-      RUNS[5]:"I3D-LMNVC-257-1eighth"}
+      RUNS[5]:"I3D-LMNVC-257-1eighth",
+      RUNS[6]:"X3D"
+  }
 
   #
   # Define global variables to control the plots
@@ -109,26 +113,34 @@ to be plotted (line style, markers /etc./)
       RUNS[2]:":",
       RUNS[3]:"-.",
       RUNS[4]:"--",
-      RUNS[5]:"-."}
+      RUNS[5]:"-.",
+      RUNS[6]:"--"
+  }
   MS={RUNS[0]:"o",
       RUNS[1]:"s",
       RUNS[2]:"^",
       RUNS[3]:"v",
       RUNS[4]:"*",
-      RUNS[5]:"+"}
+      RUNS[5]:"+",
+      RUNS[6]:"d"
+  }
   ME={RUNS[0]:50,
       RUNS[1]:70,
       RUNS[2]:90,
       RUNS[3]:110,
       RUNS[4]:130,
-      RUNS[5]:150}
+      RUNS[5]:150,
+      RUNS[6]:170
+  }
   MSIZE=4
   LAB={RUNS[0]:"I3D",
        RUNS[1]:"LMN-CC",
        RUNS[2]:"LMN-VC",
        RUNS[3]:"LMN-IC",
        RUNS[4]:"I3D-ailcaix6-310",
-       RUNS[5]:"LMN-VC-257"}
+       RUNS[5]:"LMN-VC-257",
+       RUNS[6]:"X3D"
+  }
   NOPLT=[RUNS[3], RUNS[4], RUNS[5]] # Add keys not to plot
 #+END_SRC
 
