@@ -1,0 +1,6 @@
+*.o
+*.inc*
+*.mod
+run
+src/*.prm-s*
+maarten.tar.xz

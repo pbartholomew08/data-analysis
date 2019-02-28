@@ -1,7 +1,0 @@
-# -*- mode: org -*-
-
-#+TITLE: eCSE1002
-#+AUTHOR: Paul Bartholomew
-
-
-* [[file:tgv/tgv.org][Taylor-Green Vortex]]

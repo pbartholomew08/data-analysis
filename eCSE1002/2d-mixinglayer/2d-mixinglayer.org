@@ -1,0 +1,482 @@
+#+TITLE: 2D Mixing Layer
+#+AUTHOR: Paul Bartholomew
+
+#+OPTIONS: toc:nil
+
+#+LATEX_HEADER: \usepackage{fullpage}
+#+LATEX_HEADER: \usepackage{nicefrac}
+#+LATEX_HEADER: \usepackage{subcaption}
+#+LATEX_HEADER: \hypersetup{colorlinks}
+
+#+BEGIN_abstract
+This is the investigation of the 2D mixing layer by Golanski2005 using QuasIncompact3D.
+Eric Lamballais has raised the fact the results are not /exactly/ the same as in Golanski2005 - must
+identify and fix the cause!
+#+END_abstract
+
+#+TOC: :headlines 2
+
+* Initial conditions
+
+The first thing to check is that the initial conditions are correct.
+
+The flow is periodic in $x$ with free-slip conditions in $y$ - assumed to be sufficiently far away
+that the flow evolution is determined by the initial conditions only.
+
+The velocity field is given as a hyperbolic-tangent profile:
+\begin{equation}
+U \left( y \right) = \frac{U_1 + U_2}{2} + \frac{U_1 - U_2}{2} \tanh \left( 2 \frac{y}{\delta} \right)
+\end{equation}
+where $\delta=1$ is the reference length scale.
+This field is computed by
+#+NAME: calc_meanvel
+#+BEGIN_SRC python
+  def calc_meanvel(u1, u2, ly=60.0, ny=501):
+    """Calculates the mean velocity field as a function of y."""
+
+    u = np.zeros(ny)
+    y = np.zeros(ny)
+    dy = ly / float(ny - 1)
+
+    for i in range(ny):
+      y[i] = i * dy - 0.5 * ly
+      u[i] = (u1 + u2) + (u1 - u2) * math.tanh(2 * y[i])
+      u[i] *= 0.5
+
+    return u, y
+#+END_SRC
+
+The velocities $u_1$ and $u_2$ are constrained by the condition
+\begin{equation}
+U_c = \frac{\sqrt{T_1} U_2 + \sqrt{T_2} U_1}{\sqrt{T_1} + \sqrt{T_2}} = 0 \ ,
+\end{equation}
+This constraint is computed by:
+#+NAME: calc_u1u2
+#+BEGIN_SRC python
+  def calc_u1u2(T1, uc=0):
+    """Calculates the velocity of streams 1 and 2 given the temperature of stream 1
+    for a given convective velocity.
+
+    Note that T1 is given in terms of T2 which is used as the reference property,
+    whilst the reference velocity scale is the velocity difference: U=u_1-u_2."""
+
+    u1 = uc + 1 / (1 + 1.0 / T1**0.5)
+    u2 = u1 - 1
+
+    return u1, u2
+#+END_SRC
+
+For $T_{1}=2T_{2}$ the velocity profile shown in /fig./\nbsp[[fig:umean]] is obtained.
+#+BEGIN_SRC python :noweb strip-export :results file :exports results
+  import numpy as np
+  import math
+  import matplotlib.pyplot as plt
+  <<calc_u1u2>>
+  <<calc_meanvel>>
+
+  T1=2.0
+
+  u1, u2 = calc_u1u2(T1)
+  U, y = calc_meanvel(u1, u2)
+
+  plt.plot(U, y)
+  plt.axvline(u1, color="black", ls="--")
+  plt.axvline(u2, color="black", ls="--")
+  plt.xlabel("U")
+  plt.ylabel("y")
+  plt.savefig("2d-umean.png")
+  return "2d-umean.png"
+  # return u1
+  # return u2
+#+END_SRC
+
+#+NAME: fig:umean
+#+CAPTION: Mean velocity profile of mixing layer
+#+ATTR_LATEX: :width 0.8\textwidth
+#+RESULTS:
+[[file:0.759746926648]]
+
+A perturbation is applied to this initial field, given as
+\begin{align}
+u' \left( x, y \right) &= Ae^{-\sigma{\left(y/\delta\right)}^2} \frac{\sigma}{\pi} \frac{l_x}{\delta}
+\frac{y}{\delta} \left[ \sin\left( 8\pi \frac{x}{l_x} \right) + \frac{1}{8} \sin\left( 4\pi \frac{x}{l_x}
+\right) + \frac{1}{16} \sin\left(2\pi \frac{x}{l_x} \right) \right] \\
+v' \left( x, y \right) &= Ae^{-\sigma{\left(y/\delta\right)}^2 }\left[ \cos\left( 8\pi \frac{x}{l_x}
+\right) + \frac{1}{8} \cos\left( 4\pi \frac{x}{l_x} \right) + \frac{1}{16} \cos\left( 2\pi \frac{x}{l_x}
+\right) \right]
+\end{align}
+with $A=0.025\left(U_1-U_{2}\right)$ and $\sigma=0.05$.
+
+The temperature field is given as
+\begin{equation}
+\begin{split}
+T\left(y\right) =& \frac{1}{2c_p} \left[ -U^{2}\left(y\right) -U_{1}U_{2} + U\left(y\right) \left(U_1 +
+U_2\right) \right] \\
+&+ \left(T_1 - T_2 \right) \frac{U\left(y\right)}{U_1 - U_2} + \frac{T_{2}U_1 - T_{1}U_2}{U_1 - U_2}
+\end{split}
+\end{equation}
+#+NAME: calc_T
+#+BEGIN_SRC python
+  def calc_T(T1, T2, u1, u2, u):
+
+    cp = 1.0
+
+    T = (1.0 / (2.0 * cp)) * (-u**2 - u1 * u2 + u * (u1 + u2)) \
+        + ((T1 - T2) * u + (T2 * u1 - T1 * u2)) / (u1 - u2)
+
+    return T
+#+END_SRC
+resulting in the temperature profile shown in /fig./\nbsp[[fig:tmean]].
+
+#+BEGIN_SRC python :noweb strip-export :results file :exports results
+  import numpy as np
+  import math
+  import matplotlib.pyplot as plt
+  <<calc_u1u2>>
+  <<calc_meanvel>>
+  <<calc_T>>
+
+  T1=2.0
+
+  u1, u2 = calc_u1u2(T1)
+  U, y = calc_meanvel(u1, u2)
+  T = calc_T(T1, 1.0, u1, u2, U)
+
+  plt.plot(T, y)
+  plt.axvline(1, color="black", ls="--")
+  plt.axvline(2, color="black", ls="--")
+  plt.xlabel("T")
+  plt.ylabel("y")
+  plt.xlim((0, 1.1 * max(T1, 1)))
+  plt.savefig("2d-temperature.png")
+  return "2d-temperature.png"
+#+END_SRC
+
+#+NAME: fig:tmean
+#+CAPTION: Initial temperature profile
+#+ATTR_LATEX: :width 0.8\textwidth
+#+RESULTS:
+[[file:2d-temperature.png]]
+
+These all appear to be correct and match the equivalent code/initialisation of QuasIncompact3D.
+
+* Mesh
+
+I have been running on a $256\times513$ mesh whereas Golanski2005 use a $256\times501$ mesh, to ensure
+agreement I will use the same mesh - the choice of $513$ was for efficiency reasons.
+
+* Timestepping
+
+As emphasised in Golanski2005 the timescheme should be RK3.
+It is not clear what timestep Golanski2005 uses - for their time-accuracy investigation
+$10^{-3}\leq\Delta{}t\leq7.5\times10^{-2}$ and I ran with $\Delta{}t=10^{-2}$, being approximately in the
+middle of this range.
+For purposes of matching Golanski2005 it is worth running also at $\Delta{}t=10^{-3}$.
+
+* Numerical scheme
+
+I am using the (quasi) skew-symmetric form of the momentum equations:
+#+BEGIN_EXPORT latex
+\begin{equation}
+  \frac{\partial\rho\boldsymbol{u}}{\partial{}t} + \frac{1}{2}\left(
+    \boldsymbol{\nabla}\cdot\rho\boldsymbol{u}\boldsymbol{u} +
+    \rho\boldsymbol{u}\cdot\boldsymbol{\nabla}\boldsymbol{u} + \boldsymbol{u}\left(
+      \boldsymbol{u}\cdot\boldsymbol{\nabla}\rho +
+      \rho\widehat{\boldsymbol{\nabla}\cdot\boldsymbol{u}} \right) \right) = -\boldsymbol{\nabla}p +
+  \boldsymbol{\nabla}\cdot\boldsymbol{\tau}
+\end{equation}
+#+END_EXPORT
+however it is not clear in Golanski2005 what they use - they present only the conservative form so
+worth also investigating.
+
+I was using hyper-viscosity: ~fpi2=4~ should also check ~fpi2=48/7/\pi^2~ (6^th order) and ~fpi2=1~ (iLES).
+
+* Cases
+
+Given these different options to investigate, the following cases are run to non-dimensional time
+200, outputting every whole time unit:
+
+| Case | \Delta{}t     | Mom-adv      | ~fpi2~                 | Status  |
+|------+--------+--------------+----------------------+---------|
+| ~e1~   | $10^{-2}$ | skew-sym     | $\nicefrac{48}{7\pi^2}$ | Ran     |
+| ~e2~   | $10^{-3}$ | skew-sym     | $\nicefrac{48}{7\pi^2}$ | Running |
+| ~e3~   | $10^{-2}$ | skew-sym     | $4$                  | Running |
+| ~e4~   | $10^{-3}$ | skew-sym     | $4$                  | Running |
+| ~e5~   | $10^{-2}$ | skew-sym     | $1$                  | Running |
+| ~e6~   | $10^{-3}$ | skew-sym     | $1$                  | Running |
+| ~e7~   | $10^{-2}$ | conservative | $\nicefrac{48}{7\pi^2}$ |         |
+| ~e8~   | $10^{-3}$ | conservative | $\nicefrac{48}{7\pi^2}$ |         |
+| ~e9~   | $10^{-2}$ | conservative | $4$                  |         |
+| ~e10~  | $10^{-3}$ | conservative | $4$                  |         |
+| ~e11~  | $10^{-2}$ | conservative | $1$                  |         |
+| ~e12~  | $10^{-3}$ | conservative | $1$                  |         |
+|------+--------+--------------+----------------------+---------|
+
+* Analysis
+
+** Plotting $\rho$
+
+We use =Py4Incompact3D= to ease the plotting.
+First, we need to create ~input.json~ to inform the framework of the mesh, domain and which variables
+we want to load
+#+NAME: src:input.json
+#+BEGIN_SRC js :tangle input.json
+  {
+    "type": "postprocess_input",
+    "name": "",
+    "description": "Example Py4Incompact3D Postprocess Input file",
+    "mesh": {
+      "type": "mesh",
+      "name": "mesh_example",
+      "description": "Mesh example",
+      "properties": {
+        "Nx": 256,
+        "Ny": 501,
+        "Nz": 8,
+        "Lx": 30.7,
+        "Ly": 60.0,
+        "Lz": 1.0,
+        "BCx": 0,
+        "BCy": 1,
+        "BCz": 0
+      }
+    },
+    "rho": {
+      "type": "data",
+      "name": "rho",
+      "description": "Instantaneous density",
+      "properties": {
+        "filename": "/home/paul/DATA/incompact3d-lmn/golanski_mixinglayer2d/DATA/test_lamballais/e1g/rho",
+        "direction": [0]
+      }
+    }
+  }
+#+END_SRC
+We then load this file to create a =postprocess= object which we can use to loop over time and load
+data sets.
+#+NAME: src:postproc
+#+BEGIN_SRC python
+  # Load data
+  input_file = "input.json"
+  postprocess = Postprocess(input_file)
+#+END_SRC
+
+Create the coordinates
+#+NAME: src:coord
+#+BEGIN_SRC python
+  x, y, z = postprocess.mesh.get_grid()
+  X, Y = np.meshgrid(x, y, indexing='ij')
+
+  # Shift coordinates
+  Y -= 30
+#+END_SRC
+
+At each time, we load the data, compute the contours and save the contour plot
+#+NAME: src:contour
+#+BEGIN_SRC python
+  # Load data
+  postprocess.load(time=t)
+
+  # Contour plot
+  contours=[0.501, 0.6, 0.7, 0.8, 0.9, 0.999]
+  cs = plt.contour(X, Y, postprocess.fields["rho"].data[t][:,:,0],
+                   contours,
+                   colors="r")
+  filename = "e1g-t" + str(t) + ".eps"
+  plt.savefig(filename)
+  filename = "e1g-t" + str(t) + ".png"
+  plt.savefig(filename)
+  plt.close
+
+  # Clear data
+  postprocess.clear_data()
+#+END_SRC
+
+The Golanski data is plotted by:
+#+NAME: src:golanski
+#+BEGIN_SRC python
+  x = []
+  y = []
+  t = 182
+  datfile = "./golanski2005-rho-t" + str(t) + ".csv"
+  with open(datfile, "r") as csvfile:
+    # # Skip first two rows (headers)
+    # next(csvfile)
+    # next(csvfile)
+
+    # Loop over and read rows
+    for row in csvfile:
+      words = row.rstrip("\n").split(",")
+      n = len(words) // 2
+      while len(x) < n:
+        x.append([])
+        y.append([])
+        x[-1] = []
+        y[-1] = []
+      for entry in range(0, n, 2):
+        if (words[2 * entry]):
+          x[entry].append(float(words[2 * entry]))
+          y[entry].append(float(words[2 * entry + 1]))
+
+  n = len(x)
+  for contour in range(n):
+    plt.plot(x[contour], y[contour],
+             color="black", ls="", marker="o", ms=2)
+#+END_SRC
+
+This all comes together in the following script:
+#+BEGIN_SRC python :noweb no-export :tangle contour.py
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from Py4Incompact3D.postprocess.postprocess import Postprocess
+
+  plt.figure(figsize=(5.0, 10.0))
+  <<src:golanski>>
+
+  <<src:postproc>>
+  <<src:coord>>
+
+  <<src:contour>>
+#+END_SRC
+
+#+RESULTS:
+
+and is shown in /fig./\nbsp\ref{fig:comp}.
+
+#+BEGIN_EXPORT latex
+\begin{figure}[h]
+  \centering
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[height=0.45\textheight]{e1-t182}
+    \caption{e1}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[height=0.45\textheight]{e2-t182}
+    \caption{e2}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[height=0.45\textheight]{e3-t182}
+    \caption{e3}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[height=0.45\textheight]{e4-t182}
+    \caption{e4}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[height=0.45\textheight]{e5-t182}
+    \caption{e5}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.3\textwidth}
+    \includegraphics[height=0.45\textheight]{e6-t182}
+    \caption{e6}
+  \end{subfigure}
+  \caption{Comparison of results using skew-symmetric formulation with Golanski2005.
+  Solid red lines indicate currently obtained results and black dots represent data of
+  Golanski2005.}\label{fig:comp}
+\end{figure}
+#+END_EXPORT
+** Testing extrapolation of ${\boldsymbol{\nabla}\cdot\rho\boldsymbol{u}}^{n+1}$
+
+In Golanski2005 it outlines how to extrapolate ${\boldsymbol{\nabla}\cdot\rho\boldsymbol{u}}^{n+1}$ for the RK3 as
+(Eq. (89) in Golanski2005)
+\begin{equation}
+  \label{eq:extrapol-golanski}
+  \left. \frac{\partial \rho}{\partial t} \right|^{k+1} = \left( 1 + \sum^k_{l=1} \gamma_k \right)
+  F^n_{\rho} - \sum^k_{l=1} \gamma_k F^{n-1}_{\rho} + \mathcal{O} \left( {\Delta t}^2 \right) \ ,
+\end{equation}
+where superscript $k$ is the sub timestep and $n$ is the full timestep $t^n = n\Delta{}t$.
+However, I think that $\gamma_k$ should read $\gamma_l$ (all the results above were obtained on this basis).
+To test this I have rerun case =e1= using Eq.\nbsp(\ref{eq:extrapol-golanski}) as written, obtaining the
+following result at $t=182$ shown in /fig./\nbsp[[fig:golanski-extrapol]].
+The results show considerably worse agreement with the reference data and, based on this comparison,
+I believe that \gamma_k is a typo in the manuscript whilst the code used by Golanski2005 implements \gamma_l.
+
+#+NAME: fig:golanski-extrapol
+#+CAPTION: Comparison of results using skew-symmetric formulation and Eq.\nbsp(\ref{eq:extrapol-golanski}) to extrapolate $\boldsymbol{\nabla}\cdot{\left(\rho \boldsymbol{u}\right)}^{n+1}$. Red lines indicate present results, black dots those of Golanski2005.
+#+ATTR_LATEX: :height 0.45\textheight
+[[file:e1g-t182.eps]]
+
+** Divergence error
+
+The divergence error is stored in =OUTPUT.log= as
+#+BEGIN_EXAMPLE
+ERR DIV U final Max= <Val>
+ERR DIV U final Min= <Val>
+ERR DIV U final Moy= <Val>
+#+END_EXAMPLE
+where we are interested in the ``Moy'' /i.e./ mean value.
+Also as we are using =RK3= we only want every third value as that's the end of the timestep, the
+following function reads a file looking for the ``Moy'' line taking every ~nth~ value:
+#+NAME: src:read_diverr.py
+#+BEGIN_SRC python
+  def read_diverr(outlog, n=1, divtype="Moy"):
+
+    diverr = []
+    rowstr = "ERR DIV U final " + divtype
+
+    with open(outlog, "r") as logfile:
+      read = False
+      ctr = 0
+      for row in logfile:
+        if rowstr in row:
+          ctr += 1
+          if ctr == n:
+            read = True
+            ctr = 0
+          if read:
+            words = row.split()
+            diverr.append(float(words[-1]))
+            read = False
+
+    return diverr
+#+END_SRC
+
+We then have a script to loop over the files we are interested in, read and plot the errors in the
+divergence of velocity field.
+#+BEGIN_SRC python :noweb strip-export :results file
+  import matplotlib.pyplot as plt
+  plt.rc("text", usetex=True)
+  plt.rc("font", family="serif")
+  plt.rc("font", size=11)
+
+  ROOT="/home/paul/DATA/incompact3d-lmn/golanski_mixinglayer2d/DATA/test_lamballais"
+  CASES=["e1", "e1vc0", "e1vch"]
+  LAB={CASES[0]:"CC", CASES[1]:r"VC-$\rho^0$", CASES[2]:r"VC-$\rho^h$"}
+  TEND=20
+
+  <<src:read_diverr.py>>
+
+  diverr = {}
+  for case in CASES:
+    fp = ROOT + "/" + case + "-newinit/OUTPUT.log"
+    diverr[case] = read_diverr(fp, 3)
+
+  nt = len(diverr[CASES[0]])
+  dt = TEND / float(nt - 1)
+  t = []
+  for i in range(nt):
+    t.append(i * dt)
+
+  plt.figure(figsize=(5.0, 3.5))
+  for case in CASES:
+    plt.plot(t, diverr[case], label=LAB[case])
+  plt.yscale("log")
+  plt.legend(prop={"family":"serif", "size":11})
+  plt.xlabel(r"$t$")
+  plt.ylabel("Error")
+  plt.savefig("diverr.eps", bbox_inches="tight")
+  plt.savefig("diverr.png", bbox_inches="tight")
+
+  return "diverr.png"
+#+END_SRC
+
+#+CAPTION: FOO
+#+ATTR_LATEX: :options :width 0.8\textwidth
+#+RESULTS:
+[[file:diverr.png]]
+
+* File options                                                     :noexport:
+
+# Local Variables:
+# org-confirm-babel-evaluate: nil
+# End:

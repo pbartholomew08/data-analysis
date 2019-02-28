@@ -1,12 +1,323 @@
-# -*- mode: org -*-
+# -*- mode: org; org-confirm-babel-evaluate: nil -*-
 
 #+TITLE: Taylor-Green Vortex
 #+AUTHOR: Paul Bartholomew
 
-* Requirements
+#+STARTUP: inlineimages
 
-* Setup
+#+LATEX_CLASS_OPTIONS: [a4paper, 10pt]
+#+LATEX_HEADER: \hypersetup{colorlinks, linkcolor=red, urlcolor=blue}
+#+LATEX_HEADER: \usepackage{fullpage}
+#+LATEX_HEADER: \usepackage{placeins}
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \fvset{fontsize=\footnotesize}
+#+LATEX_HEADER: \RecustomVerbatimEnvironment{verbatim}{Verbatim}{xleftmargin=5mm, samepage=true}
 
-* Evolution of Kinetic Energy
+* Introduction
+ 
+As a canoncical test case, the Taylor-Green vortex provides a check that the time integration of the
+Navier-Stokes is working correctly.
+The Taylor-Green vortex is initialised as follows
+#+BEGIN_EXPORT latex
+  \begin{equation}
+    \boldsymbol{u} =
+    \begin{cases}
+      U \sin\left( \frac{x}{\pi} \right) \cos\left( \frac{y}{\pi} \right) \cos\left( \frac{z}{\pi}
+      \right)\\
+      -U \cos\left( \frac{x}{\pi} \right) \sin\left( \frac{y}{\pi} \right) \cos\left( \frac{z}{\pi}
+      \right)\\
+      0
+    \end{cases}
+  \end{equation}
+#+END_EXPORT
+in the $-\pi \leq x,y,z \leq \pi$ periodic box.
 
-* Evolution of Enstrophy
+In this test of QuasIncompact3D, the time evolution of the kinetic energy and enstrophy will be
+compared against that using reference [[https://www.incompact3d.com/uploads/5/8/7/2/58724623/taylor-green-3d.tar][Incompact3D]] both using a $128^3$ mesh and the reference data of
+Jammy2016 on a $512^3$ mesh.
+
+** Requirements
+
+- python
+- matplotlib
+- Data for the Taylor-Green Vortex case
+  - This is expected to be under the path ~${HOME}/DATA/incompact3d-lmn/taylorgreen-3d~ for
+    alternative locations customise the ~case_root~ variable in [[*Setup%20environment][Setup environment]].
+  - The data is available [[https://imperialcollegelondon.box.com/v/eCSE1002-TGV][here]].
+- (Optional) LaTeX to generate this document
+
+* Postprocessing
+** Setup
+
+Before we do any actual postprocessing, we require some helper functions, loading and configuring
+plotting packages /etc./
+
+*** Imports
+
+In this program we use the ~os~ module to build paths and ~matplotlib~ for plotting.
+
+#+NAME: imports
+#+BEGIN_SRC python
+  import os
+  import matplotlib.pyplot as plt
+#+END_SRC
+
+*** Configure matplotlib
+
+~matplotlib~ requires some configuration to generate high quality, /consistent/ plots.
+
+#+NAME: plt_config
+#+BEGIN_SRC python
+  plt.rc("text", usetex=True)
+  plt.rc("font", family="serif")
+  plt.rc("font", size=11)
+  plt.rc("legend", numpoints=1)
+  plt.rc("axes", axisbelow=True)
+#+END_SRC
+
+*** Setup environment
+
+Here we define variables to be used by postprocessing scripts, for instance where is the data
+located?
+Also additional information about what the different data sets are called and how we would like them
+to be plotted (line style, markers /etc./)
+
+#+NAME: env
+#+BEGIN_SRC python :noweb strip-export
+  case_root = os.path.expanduser("~/DATA/incompact3d-lmn/taylorgreen-3d")
+  jammy_dat = "jammy2016-512.dat"
+  lamballais_dat = "TGV_Re1600-512.dat"
+
+  RUNS=["i3d",
+        "i3d-lmn-cc",
+        "i3d-lmn-vc",
+        "i3d-lmn-ic",
+        "i3d-ailcaix6-310",
+        "i3d-lmn-vc-257",
+        "x3d"
+  ]
+  FP={RUNS[0]:"I3D-128",
+      RUNS[1]:"I3D-LMNCC-128",
+      RUNS[2]:"I3D-LMNVC-128",
+      RUNS[3]:"I3D-LMNIC-128",
+      RUNS[4]:"I3D-128-ailcaix6-310",
+      RUNS[5]:"I3D-LMNVC-257-1eighth",
+      RUNS[6]:"X3D"
+  }
+
+  #
+  # Define global variables to control the plots
+  #
+  LS={RUNS[0]:"--",
+      RUNS[1]:"-.",
+      RUNS[2]:":",
+      RUNS[3]:"-.",
+      RUNS[4]:"--",
+      RUNS[5]:"-.",
+      RUNS[6]:"--"
+  }
+  MS={RUNS[0]:"o",
+      RUNS[1]:"s",
+      RUNS[2]:"^",
+      RUNS[3]:"v",
+      RUNS[4]:"*",
+      RUNS[5]:"+",
+      RUNS[6]:"d"
+  }
+  ME={RUNS[0]:50,
+      RUNS[1]:70,
+      RUNS[2]:90,
+      RUNS[3]:110,
+      RUNS[4]:130,
+      RUNS[5]:150,
+      RUNS[6]:170
+  }
+  MSIZE=4
+  LAB={RUNS[0]:"I3D",
+       RUNS[1]:"LMN-CC",
+       RUNS[2]:"LMN-VC",
+       RUNS[3]:"LMN-IC",
+       RUNS[4]:"I3D-ailcaix6-310",
+       RUNS[5]:"LMN-VC-257",
+       RUNS[6]:"X3D"
+  }
+  NOPLT=[RUNS[3], RUNS[4], RUNS[5]] # Add keys not to plot
+#+END_SRC
+
+#+RESULTS: env
+
+*** Load data
+
+To load the reference data from Jammy2016 the following snippet can be used:
+
+#+NAME: jammy_ref
+#+BEGIN_SRC python
+  t_ref = []
+  ke_ref = []
+  enst_ref = []
+  with open(os.path.join(case_root, jammy_dat), "r") as datfile:
+    for row in datfile:
+      words = row.split()
+      if len(words) and (words[0] != "#"):
+        t_ref.append(float(words[0]))
+        ke_ref.append(float(words[1]))
+        enst_ref.append(float(words[2]))
+#+END_SRC
+
+whilst the data from (Quas)Incompact3D can be loaded using the following helper function:
+
+#+NAME: data_loader
+#+BEGIN_SRC python
+  def data_loader(filename):
+    
+    t = []
+    dat = []
+    
+    with open(filename, "r") as datfile:
+      for row in datfile:
+        words = row.split()
+        t.append(float(words[-2]))
+        dat.append(float(words[-1]))
+
+    return t, dat
+#+END_SRC
+
+and the high resolution reference data of Eric Lamballais by:
+#+NAME: lamballais_ref
+#+BEGIN_SRC python
+  t_lamb = []
+  ke_lamb = []
+  enst_lamb = []
+  with open(os.path.join(case_root, lamballais_dat), "r") as datfile:
+    for row in datfile:
+      words = row.split()
+      if len(words) and (words[0] != "#"):
+        t_lamb.append(float(words[0]))
+        ke_lamb.append(float(words[1]))
+        enst_lamb.append(float(words[4]))
+#+END_SRC
+
+** Evolution of Kinetic Energy
+
+We plot the the evolution of kinetic energy using QuasIncompact3D with constant- and
+variable-coefficient Poisson solvers and compare against reference Incompact3D and Jammy2016.
+
+*** Preprocessing
+
+First we need to extract the KE data from the ~OUTPUT.log~ files.
+
+*** Plot
+
+The business end: using the above, generate a plot of the evolution of kinetic energy.
+
+#+BEGIN_SRC python :noweb no-export :tangle tgv_ke.py
+  <<imports>>
+
+  <<env>>
+
+  <<plt_config>>
+
+  <<jammy_ref>>
+  <<lamballais_ref>>
+
+  <<data_loader>>
+
+  # Create plot
+  plt.figure(figsize=(5.0, 3.5))
+  plt.grid()
+
+  # Plot Jammy reference KE
+  plt.plot(t_ref, ke_ref, label="Jammy", color="black")
+  plt.plot(t_lamb, ke_lamb, label="Dairay", color="orange")
+
+  # Read and plot data from (Quas)Incompact3D
+  for run in RUNS:
+    if not run in NOPLT:
+      filename = os.path.join(case_root, FP[run], "KE.dat")
+      t, ke = data_loader(filename)
+      plt.plot(t, ke,
+               label=LAB[run],
+               ls=LS[run],
+               marker=MS[run], markevery=ME[run], markersize=MSIZE, mew=0)
+
+  # Customise and save plot
+  plt.xlabel(r"$t$")
+  plt.ylabel(r"$KE$")
+  plt.legend(prop={"size":10},
+             frameon=False)
+
+  # Create a .eps for use in publications and a .png
+  # for inline viewing in the notebook
+  plt.savefig("taylorgreen_ke.eps", bbox_inches="tight")
+  plt.savefig("taylorgreen_ke.png", bbox_inches="tight")
+#+END_SRC
+
+#+RESULTS:
+: None
+
+#+ATTR_LATEX: :width 0.75\textwidth
+#+CAPTION: Evolution of kinetic energy for $t \leq 20$.
+[[file:taylorgreen_ke.png]]
+
+#+BEGIN_EXPORT latex
+  \FloatBarrier
+#+END_EXPORT
+
+** Evolution of Enstrophy
+
+We plot the the evolution of enstrophy using QuasIncompact3D with constant- and variable-coefficient
+Poisson solvers and compare against reference Incompact3D and Jammy2016.
+
+*** Plot
+
+The business end: using the above, generate a plot of the evolution of enstrophy.
+
+#+BEGIN_SRC python :noweb no-export :tangle tgv_enst.py
+  <<imports>>
+
+  <<env>>
+
+  <<plt_config>>
+
+  <<jammy_ref>>
+  <<lamballais_ref>>
+
+  <<data_loader>>
+
+  # Create plot
+  plt.figure(figsize=(5.0, 3.5))
+  plt.grid()
+
+  # Plot Jammy reference enstrophy
+  plt.plot(t_ref, enst_ref, label="Jammy", color="black")
+  plt.plot(t_lamb, enst_lamb, label="Dairay", color="orange")
+
+  # Read and plot data from (Quas)Incompact3D
+  for run in RUNS:
+    if not run in NOPLT:
+      filename = os.path.join(case_root, FP[run], "ENSTROPHY.dat")
+      t, enst = data_loader(filename)
+      plt.plot(t, enst,
+               label=LAB[run],
+               ls=LS[run],
+               marker=MS[run], markevery=ME[run], markersize=MSIZE, mew=0)
+
+  # Customise and save plot
+  plt.xlabel(r"$t$")
+  plt.ylabel(r"$Enstrophy$")
+  plt.legend(prop={"size":10},
+             frameon=False)
+
+  # Create a .eps for use in publications and a .png
+  # for inline viewing in the notebook
+  plt.savefig("taylorgreen_enst.eps", bbox_inches="tight")
+  plt.savefig("taylorgreen_enst.png", bbox_inches="tight")
+#+END_SRC
+
+#+RESULTS:
+: None
+
+#+ATTR_LATEX: :width 0.75\textwidth
+#+CAPTION: Evolution of enstrophy
+[[file:taylorgreen_enst.png]]
+
