@@ -214,7 +214,7 @@ Given these different options to investigate, the following cases are run to non
 
 * Analysis
 
-** Plotting
+** Plotting $\rho$
 
 We use =Py4Incompact3D= to ease the plotting.
 First, we need to create ~input.json~ to inform the framework of the mesh, domain and which variables
@@ -297,7 +297,9 @@ The Golanski data is plotted by:
 #+BEGIN_SRC python
   x = []
   y = []
-  with open("./golanski2005-rho-t182.csv", "r") as csvfile:
+  t = 182
+  datfile = "./golanski2005-rho-t" + str(t) + ".csv"
+  with open(datfile, "r") as csvfile:
     # # Skip first two rows (headers)
     # next(csvfile)
     # next(csvfile)
@@ -334,7 +336,6 @@ This all comes together in the following script:
   <<src:postproc>>
   <<src:coord>>
 
-  t = 182
   <<src:contour>>
 #+END_SRC
 
@@ -374,7 +375,6 @@ and is shown in /fig./\nbsp\ref{fig:comp}.
   Golanski2005.}\label{fig:comp}
 \end{figure}
 #+END_EXPORT
-
 ** Testing extrapolation of ${\boldsymbol{\nabla}\cdot\rho\boldsymbol{u}}^{n+1}$
 
 In Golanski2005 it outlines how to extrapolate ${\boldsymbol{\nabla}\cdot\rho\boldsymbol{u}}^{n+1}$ for the RK3 as
@@ -395,6 +395,85 @@ I believe that \gamma_k is a typo in the manuscript whilst the code used by Gola
 #+CAPTION: Comparison of results using skew-symmetric formulation and Eq.\nbsp(\ref{eq:extrapol-golanski}) to extrapolate $\boldsymbol{\nabla}\cdot{\left(\rho \boldsymbol{u}\right)}^{n+1}$. Red lines indicate present results, black dots those of Golanski2005.
 #+ATTR_LATEX: :height 0.45\textheight
 [[file:e1g-t182.eps]]
+
+** Divergence error
+
+The divergence error is stored in =OUTPUT.log= as
+#+BEGIN_EXAMPLE
+ERR DIV U final Max= <Val>
+ERR DIV U final Min= <Val>
+ERR DIV U final Moy= <Val>
+#+END_EXAMPLE
+where we are interested in the ``Moy'' /i.e./ mean value.
+Also as we are using =RK3= we only want every third value as that's the end of the timestep, the
+following function reads a file looking for the ``Moy'' line taking every ~nth~ value:
+#+NAME: src:read_diverr.py
+#+BEGIN_SRC python
+  def read_diverr(outlog, n=1, divtype="Moy"):
+
+    diverr = []
+    rowstr = "ERR DIV U final " + divtype
+
+    with open(outlog, "r") as logfile:
+      read = False
+      ctr = 0
+      for row in logfile:
+        if rowstr in row:
+          ctr += 1
+          if ctr == n:
+            read = True
+            ctr = 0
+          if read:
+            words = row.split()
+            diverr.append(float(words[-1]))
+            read = False
+
+    return diverr
+#+END_SRC
+
+We then have a script to loop over the files we are interested in, read and plot the errors in the
+divergence of velocity field.
+#+BEGIN_SRC python :noweb strip-export :results file
+  import matplotlib.pyplot as plt
+  plt.rc("text", usetex=True)
+  plt.rc("font", family="serif")
+  plt.rc("font", size=11)
+
+  ROOT="/home/paul/DATA/incompact3d-lmn/golanski_mixinglayer2d/DATA/test_lamballais"
+  CASES=["e1", "e1vc0", "e1vch"]
+  LAB={CASES[0]:"CC", CASES[1]:r"VC-$\rho^0$", CASES[2]:r"VC-$\rho^h$"}
+  TEND=20
+
+  <<src:read_diverr.py>>
+
+  diverr = {}
+  for case in CASES:
+    fp = ROOT + "/" + case + "-newinit/OUTPUT.log"
+    diverr[case] = read_diverr(fp, 3)
+
+  nt = len(diverr[CASES[0]])
+  dt = TEND / float(nt - 1)
+  t = []
+  for i in range(nt):
+    t.append(i * dt)
+
+  plt.figure(figsize=(5.0, 3.5))
+  for case in CASES:
+    plt.plot(t, diverr[case], label=LAB[case])
+  plt.yscale("log")
+  plt.legend(prop={"family":"serif", "size":11})
+  plt.xlabel(r"$t$")
+  plt.ylabel("Error")
+  plt.savefig("diverr.eps", bbox_inches="tight")
+  plt.savefig("diverr.png", bbox_inches="tight")
+
+  return "diverr.png"
+#+END_SRC
+
+#+CAPTION: FOO
+#+ATTR_LATEX: :options :width 0.8\textwidth
+#+RESULTS:
+[[file:diverr.png]]
 
 * File options                                                     :noexport:
 
