@@ -77,14 +77,14 @@ is the vorticity.
 
 The codes compute these statistics online, here a =python= script has been developed to plot them for
 comparison.
-It expects that the data are located in =./x3d/out/statistics-clean= and =./e3d/time_evol-clean.dat=
-where the original output files have had any additional information removed to have the format
+It expects that the data are located in =./x3d/time_evol.dat= and =./e3d/time_evol.dat=
+with the following format (comment lines beginning with a =#= and and additional columns are ignored)
 
-| TIME | ENSTROPHY | KE |
-| t1   | e1        | k1 |
-| t2   | e2        | k2 |
-| ...  |           |    |
-| tn   | en        | kn |
+| *#* | *TIME* | *KE* | *DISS* | *ENST* | *DISS2* |
+|   | t1   | k1 | d1   | e1   | D1    |
+|   | t2   | k2 | d2   | e2   | D2    |
+|   | ...  |    |      |      |       |
+|   | tn   | kn | dn   | en   | Dn    |
 
 which can be read by following =python= snippet given in listing\nbsp[[src:read-stats.py]].
 
@@ -97,12 +97,12 @@ which can be read by following =python= snippet given in listing\nbsp[[src:read-
     ke = []
 
     with open(filename, "r") as data:
-      next(data)
       for row in data:
-        words = row.split()
-        t.append(float(words[0]))
-        enst.append(float(words[1]))
-        ke.append(float(words[2]))
+        if not (row[0]=="#"):
+          words = row.split()
+          t.append(float(words[0]))
+          enst.append(float(words[1]))
+          ke.append(float(words[3]))
 
     return t, enst, ke
 #+end_src
@@ -136,8 +136,12 @@ And finally, the following script (=plot_tgv.py=) plots the data in /fig./\nbsp[
   <<src:read-stats.py>>
   <<src:plot-stats.py>>
 
-  x3d_t, x3d_enst, x3d_ke = read_stats("./x3d/statistics-clean")
-  e3d_t, e3d_enst, e3d_ke = read_stats("./e3d/time_evol-clean.dat")
+  x3d_t, x3d_enst, x3d_ke = read_stats("./x3d/time_evol.dat")
+  e3d_t, e3d_enst, e3d_ke = read_stats("./e3d/time_evol.dat")
+
+  # Made an error in X3D, all time shifted by -dt=1e-2
+  for i in range(len(x3d_t)):
+    x3d_t[i] += 1.0e-2
 
   plot_stats(x3d_t, x3d_enst, "X3D",
              e3d_t, e3d_enst, "Eric",
