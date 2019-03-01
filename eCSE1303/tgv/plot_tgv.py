@@ -1,5 +1,7 @@
-
 import matplotlib.pyplot as plt
+plt.rc("text", usetex=True)
+plt.rc("font", family="serif")
+plt.rc("font", size=11)
 
 def read_stats(filename):
   t = []
@@ -25,17 +27,14 @@ def plot_stats(x3d_t, x3d_dat, x3d_lab, e3d_t, e3d_dat, e3d_lab,
 
   plt.xlabel(xlab)
   plt.ylabel(ylab)
-  plt.legend()
+  plt.legend(prop={"family":"serif",
+                   "size":11})
 
   plt.savefig(outfile, bbox_inches="tight")
   plt.close()
 
 x3d_t, x3d_enst, x3d_ke = read_stats("./x3d/time_evol.dat")
 e3d_t, e3d_enst, e3d_ke = read_stats("./e3d/time_evol.dat")
-
-# Made an error in X3D, all time shifted by -dt=1e-2
-for i in range(len(x3d_t)):
-  x3d_t[i] += 1.0e-2
 
 plot_stats(x3d_t, x3d_enst, "X3D",
            e3d_t, e3d_enst, "Eric",
