@@ -77,14 +77,31 @@ is the vorticity.
 
 The codes compute these statistics online, here a =python= script has been developed to plot them for
 comparison.
-It expects that the data are located in =./x3d/time_evol.dat= and =./e3d/time_evol.dat=
-with the following format (comment lines beginning with a =#= and and additional columns are ignored)
+It expects that the data are located in =./x3d/time_evol.dat= and =./e3d/time_evol.dat= (available at
+[[https://imperialcollegelondon.box.com/shared/static/w7prpf8bheykw91lhlv7a0835f1pb37r.dat][x3d_data]] and *can't get link*) with the following format (comment lines beginning with a =#= and and
+additional columns are ignored)
 
 | *#* | *TIME* | *KE* | *DISS* | *ENST* | *DISS2* |
 |   | t1   | k1 | d1   | e1   | D1    |
 |   | t2   | k2 | d2   | e2   | D2    |
 |   | ...  |    |      |      |       |
 |   | tn   | kn | dn   | en   | Dn    |
+
+To begin with, we download the data and rename the files to =x3d_time_evol.dat= and =e3d_time_evol.dat=
+#+BEGIN_SRC shell
+  #!/bin/sh
+
+  # x3d data
+  wget https://imperialcollegelondon.box.com/shared/static/w7prpf8bheykw91lhlv7a0835f1pb37r.dat
+  mv w7prpf8bheykw91lhlv7a0835f1pb37r.dat x3d_time_evol.dat
+
+  # e3d data
+  #
+  # BOX WON'T SHARE THE LINK!!!
+  #
+#+END_SRC
+
+#+RESULTS:
 
 which can be read by following =python= snippet given in listing\nbsp[[src:read-stats.py]].
 
@@ -98,7 +115,7 @@ which can be read by following =python= snippet given in listing\nbsp[[src:read-
 
     with open(filename, "r") as data:
       for row in data:
-        if not (row[0]=="#"):
+        if not (row[0]=="#"): # Ignore comments
           words = row.split()
           t.append(float(words[0]))
           enst.append(float(words[3]))
@@ -140,13 +157,11 @@ And finally, the following script (=plot_tgv.py=) plots the data in /fig./\nbsp[
   <<src:read-stats.py>>
   <<src:plot-stats.py>>
 
-  x3d_t, x3d_enst, x3d_ke = read_stats("./x3d/time_evol.dat")
-  x3dgpu_t, x3dgpu_enst, x3dgpu_ke = read_stats("./x3d-gpu/time_evol.dat")
-  e3d_t, e3d_enst, e3d_ke = read_stats("./e3d/time_evol.dat")
+  x3d_t, x3d_enst, x3d_ke = read_stats("./x3d_time_evol.dat")
+  e3d_t, e3d_enst, e3d_ke = read_stats("./e3d_time_evol.dat")
 
   plt.figure(figsize=(5.0, 3.5))
   plt.plot(x3d_t, x3d_enst, label="X3D")
-  plt.plot(x3dgpu_t, x3dgpu_enst, label="X3D-GPU")
   plt.plot(e3d_t, e3d_enst, label="Eric")
   plt.xlabel(r"$t$")
   plt.ylabel(r"$\varepsilon$")
@@ -157,7 +172,6 @@ And finally, the following script (=plot_tgv.py=) plots the data in /fig./\nbsp[
 
   plt.figure(figsize=(5.0, 3.5))
   plt.plot(x3d_t, x3d_ke, label="X3D")
-  plt.plot(x3dgpu_t, x3dgpu_ke, label="X3D-GPU")
   plt.plot(e3d_t, e3d_ke, label="Eric")
   plt.xlabel(r"$t$")
   plt.ylabel(r"$k$")
