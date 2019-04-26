@@ -211,4 +211,13 @@ It is clear that there is excellent agreement between =Xcompact3D= and Eric's re
 #+NAME: fig:enst
 [[./tgv_enstrophy.eps]]
 
+** Visualisation
+
+* Changelog
+
+** [2019-04-26 Fri]
+
+- Adding a visualisation section
+- Tidying up layout of the document
+- Added shell script to download data from =box=
 
