@@ -60,6 +60,31 @@ The runtime parameters pertinent to the simulation are given in table\nbsp[[tab:
 | Output frequency |            1,000 | Stores snapshots every 1,000 steps |
 |                  |                  |                                    |
 
+** Statistics
+
+The main statistics of interest for comparison purposes are the kinetic energy and enstrophy,
+defined as
+\begin{align}
+  k &= \frac{1}{2} \int_{\Omega} {\boldsymbol{u}}^2 dV \ , \\
+  \intertext{and}
+  \varepsilon &= \int_{\Omega} {\left| \boldsymbol{\omega} \right|}^2 dV \ ,
+\end{align}
+where
+\begin{equation}
+  \boldsymbol{\omega} = \boldsymbol{\nabla} \times \boldsymbol{u} \ ,
+\end{equation}
+is the vorticity, these are computed online.
+Time series of these statistics are recorded in the file =time_evol.dat= with the format shown in
+table\nbsp[[tab:time_evol.dat]] (comment lines beginning with a =#= and and additional columns are ignored).
+
+#+CAPTION: Output format for =time_evol.dat=
+#+NAME: tab:time_evol.dat
+| *#* | *TIME* | *KE* | *DISS* | *ENST* | *DISS2* |
+|   | t1   | k1 | d1   | e1   | D1    |
+|   | t2   | k2 | d2   | e2   | D2    |
+|   | ...  |    |      |      |       |
+|   | tn   | kn | dn   | en   | Dn    |
+
 * Results 
 
 ** Data availability
@@ -94,31 +119,8 @@ places the files appropriately.
 
 ** Postprocessing results
 
-The main statistics of interest for comparison purposes are the kinetic energy and enstrophy,
-defined as
-\begin{align}
-  k &= \frac{1}{2} \int_{\Omega} {\boldsymbol{u}}^2 dV \ , \\
-  \intertext{and}
-  \varepsilon &= \int_{\Omega} {\left| \boldsymbol{\omega} \right|}^2 dV \ ,
-\end{align}
-where
-\begin{equation}
-  \boldsymbol{\omega} = \boldsymbol{\nabla} \times \boldsymbol{u} \ ,
-\end{equation}
-is the vorticity.
-
-The codes compute these statistics online, here a =python= script has been developed to plot them for
-comparison.
-It expects that the data are located in =./x3d/time_evol.dat= and =./e3d/time_evol.dat=
-with the following format (comment lines beginning with a =#= and and additional columns are ignored)
-
-| *#* | *TIME* | *KE* | *DISS* | *ENST* | *DISS2* |
-|   | t1   | k1 | d1   | e1   | D1    |
-|   | t2   | k2 | d2   | e2   | D2    |
-|   | ...  |    |      |      |       |
-|   | tn   | kn | dn   | en   | Dn    |
-
-which can be read by following =python= snippet given in listing\nbsp[[src:read-stats.py]].
+Python code to read and plot the data (using =matplotlib=) are given in listings\nbsp[[src:read-stats.py]]
+and\nbsp[[src:plot-stats.py]].
 
 #+CAPTION: Python code to read statistics for TGV case.
 #+NAME: src:read-stats.py
@@ -139,8 +141,6 @@ which can be read by following =python= snippet given in listing\nbsp[[src:read-
 
     return t, enst, ke
 #+end_src
-
-The data are plotted using =matplotlib= in listing\nbsp[[src:plot-stats.py]].
 
 #+CAPTION: Python code to plot comparison of =Xcompact3D= and Eric's reference code.
 #+NAME: src:plot-stats.py
@@ -210,4 +210,5 @@ It is clear that there is excellent agreement between =Xcompact3D= and Eric's re
 #+CAPTION:Comparison of enstrophy
 #+NAME: fig:enst
 [[./tgv_enstrophy.eps]]
+
 
