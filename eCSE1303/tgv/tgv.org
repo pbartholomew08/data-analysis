@@ -60,7 +60,39 @@ The runtime parameters pertinent to the simulation are given in table\nbsp[[tab:
 | Output frequency |            1,000 | Stores snapshots every 1,000 steps |
 |                  |                  |                                    |
 
-* Comparison of results
+* Results 
+
+** Data availability
+
+The data in the form of enstrophy and kinetic energy evolutions are available for the reference and
+comparison simulations [[https://imperialcollegelondon.box.com/s/p0tbirf3ps034yndm5sq10j2pkhvbt85][here]] and [[https://imperialcollegelondon.box.com/s/w7prpf8bheykw91lhlv7a0835f1pb37r][here]] respectively.
+For post processing these datasets are expected to be placed in =./x3d/time_evol.dat= and
+=./e3d/time_evol.dat= respectively, the shell script in listing\nbsp[[src:dl-ke-enstr.sh]] downloads and
+places the files appropriately.
+
+#+CAPTION: Shell script to download data for kinetic energy and enstrophy comparison.
+#+NAME: src:dl-ke-enstr.sh
+#+begin_src sh
+  #!/bin/bash
+
+  # Download links
+  BOX_ADDR=https://imperialcollegelondon.box.com/shared/static
+  E3D_DATA=p0tbirf3ps034yndm5sq10j2pkhvbt85.dat
+  X3D_DATA=w7prpf8bheykw91lhlv7a0835f1pb37r.dat
+
+  wget $BOX_ADDR/$E3D_DATA
+  wget $BOX_ADDR/$X3D_DATA
+
+  mkdir ./e3d
+  mkdir ./x3d
+
+  mv $E3D_DATA ./e3d/time_evol.dat
+  mv $X3D_DATA ./x3d/time_evol.dat
+#+end_src
+
+#+RESULTS: src:dl-ke-enstr.sh
+
+** Postprocessing results
 
 The main statistics of interest for comparison purposes are the kinetic energy and enstrophy,
 defined as
@@ -97,6 +129,7 @@ which can be read by following =python= snippet given in listing\nbsp[[src:read-
     ke = []
 
     with open(filename, "r") as data:
+      print "Reading " + filename
       for row in data:
         if not (row[0]=="#"):
           words = row.split()
@@ -129,8 +162,14 @@ The data are plotted using =matplotlib= in listing\nbsp[[src:plot-stats.py]].
     plt.close()
 #+end_src
 
-And finally, the following script (=plot_tgv.py=) plots the data in /fig./\nbsp[[fig:ke]] and /fig./\nbsp[[fig:enst]].
+** Comparison of results
 
+Using the above functions, the script in listing\nbsp[[src:plot_tgv.py]] (=plot_tgv.py=) plots the data in
+/fig./\nbsp[[fig:ke]] and /fig./\nbsp[[fig:enst]].
+It is clear that there is excellent agreement between =Xcompact3D= and Eric's reference code.
+
+#+CAPTION: Python script to plot comparison of =Xcompact3D= and Eric's reference code.
+#+NAME: src:plot_tgv.py
 #+begin_src python :noweb no-export :tangle plot_tgv.py
   import matplotlib.pyplot as plt
   plt.rc("text", usetex=True)
@@ -141,12 +180,10 @@ And finally, the following script (=plot_tgv.py=) plots the data in /fig./\nbsp[
   <<src:plot-stats.py>>
 
   x3d_t, x3d_enst, x3d_ke = read_stats("./x3d/time_evol.dat")
-  x3dgpu_t, x3dgpu_enst, x3dgpu_ke = read_stats("./x3d-gpu/time_evol.dat")
   e3d_t, e3d_enst, e3d_ke = read_stats("./e3d/time_evol.dat")
 
   plt.figure(figsize=(5.0, 3.5))
   plt.plot(x3d_t, x3d_enst, label="X3D")
-  plt.plot(x3dgpu_t, x3dgpu_enst, label="X3D-GPU")
   plt.plot(e3d_t, e3d_enst, label="Eric")
   plt.xlabel(r"$t$")
   plt.ylabel(r"$\varepsilon$")
@@ -157,7 +194,6 @@ And finally, the following script (=plot_tgv.py=) plots the data in /fig./\nbsp[
 
   plt.figure(figsize=(5.0, 3.5))
   plt.plot(x3d_t, x3d_ke, label="X3D")
-  plt.plot(x3dgpu_t, x3dgpu_ke, label="X3D-GPU")
   plt.plot(e3d_t, e3d_ke, label="Eric")
   plt.xlabel(r"$t$")
   plt.ylabel(r"$k$")
@@ -167,9 +203,6 @@ And finally, the following script (=plot_tgv.py=) plots the data in /fig./\nbsp[
   plt.close()
 #+end_src
 
-#+RESULTS:
-: None
-
 #+CAPTION:Comparison of kinetic energy
 #+NAME: fig:ke
 [[./tgv_ke.eps]]
@@ -177,5 +210,4 @@ And finally, the following script (=plot_tgv.py=) plots the data in /fig./\nbsp[
 #+CAPTION:Comparison of enstrophy
 #+NAME: fig:enst
 [[./tgv_enstrophy.eps]]
-
 
