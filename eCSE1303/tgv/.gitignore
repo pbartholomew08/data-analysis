@@ -2,3 +2,7 @@
 *.dat
 *.pdf
 *.eps
+*.f90
+paraview
+e3d/
+x3d/
