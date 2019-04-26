@@ -94,6 +94,7 @@ comparison simulations [[https://imperialcollegelondon.box.com/s/p0tbirf3ps034yn
 For post processing these datasets are expected to be placed in =./x3d/time_evol.dat= and
 =./e3d/time_evol.dat= respectively, the shell script in listing\nbsp[[src:dl-ke-enstr.sh]] downloads and
 places the files appropriately.
+Also instantaneous snapshots of the flow field are downloaded for later post processing.
 
 #+CAPTION: Shell script to download data for kinetic energy and enstrophy comparison.
 #+NAME: src:dl-ke-enstr.sh
@@ -104,18 +105,107 @@ places the files appropriately.
   BOX_ADDR=https://imperialcollegelondon.box.com/shared/static
   E3D_DATA=p0tbirf3ps034yndm5sq10j2pkhvbt85.dat
   X3D_DATA=w7prpf8bheykw91lhlv7a0835f1pb37r.dat
+  X3D_VISU=78lzzvm9hwe9aff2zb32bu1uvp9qbcbx.xz
+  X3D_PARA=f8d24cs9x8xty95bt69jlckbq8dsi2a3.prm
 
+  # Download data
   wget $BOX_ADDR/$E3D_DATA
   wget $BOX_ADDR/$X3D_DATA
+  wget $BOX_ADDR/$X3D_VISU
+  wget $BOX_ADDR/$X3D_PARA
 
+  # Make directories
   mkdir ./e3d
   mkdir ./x3d
 
+  # Move data to appropriate locations (untar as necessary)
   mv $E3D_DATA ./e3d/time_evol.dat
   mv $X3D_DATA ./x3d/time_evol.dat
+  mv $X3D_VISU ./x3d/data.tar.xz && \
+      tar -C x3d/ -xvf x3d/data.tar.xz --strip-components 1
 #+end_src
 
 #+RESULTS: src:dl-ke-enstr.sh
+| data/vort017 |
+| data/ux010   |
+| data/ux004   |
+| data/uy011   |
+| data/vort004 |
+| data/uy001   |
+| data/uz019   |
+| data/uy012   |
+| data/uz001   |
+| data/uy006   |
+| data/vort016 |
+| data/ux016   |
+| data/uz014   |
+| data/ux007   |
+| data/uy016   |
+| data/ux012   |
+| data/uy005   |
+| data/uz006   |
+| data/vort010 |
+| data/ux018   |
+| data/vort013 |
+| data/uy020   |
+| data/uy010   |
+| data/uz009   |
+| data/vort009 |
+| data/vort007 |
+| data/ux013   |
+| data/vort012 |
+| data/ux020   |
+| data/uz018   |
+| data/vort014 |
+| data/uz016   |
+| data/uz008   |
+| data/uy013   |
+| data/ux008   |
+| data/uy018   |
+| data/uz012   |
+| data/uy014   |
+| data/uy019   |
+| data/ux002   |
+| data/uy003   |
+| data/vort008 |
+| data/uz015   |
+| data/uz017   |
+| data/uz005   |
+| data/uz011   |
+| data/uy009   |
+| data/vort002 |
+| data/uy015   |
+| data/uy007   |
+| data/uy017   |
+| data/vort015 |
+| data/uy004   |
+| data/vort019 |
+| data/ux005   |
+| data/vort006 |
+| data/uy008   |
+| data/vort018 |
+| data/uz007   |
+| data/ux009   |
+| data/ux006   |
+| data/ux003   |
+| data/ux017   |
+| data/ux019   |
+| data/uy002   |
+| data/vort005 |
+| data/uz002   |
+| data/vort011 |
+| data/ux015   |
+| data/uz004   |
+| data/vort001 |
+| data/vort003 |
+| data/uz010   |
+| data/vort020 |
+| data/ux014   |
+| data/ux001   |
+| data/uz013   |
+| data/uz020   |
+| data/ux011   |
+| data/uz003   |
 
 ** Postprocessing results
 
@@ -204,20 +294,235 @@ It is clear that there is excellent agreement between =Xcompact3D= and Eric's re
 #+end_src
 
 #+CAPTION:Comparison of kinetic energy
+#+ATTR_LATEX: :options :width 0.75\textwidth
 #+NAME: fig:ke
 [[./tgv_ke.eps]]
 
 #+CAPTION:Comparison of enstrophy
+#+ATTR_LATEX: :options :width 0.75\textwidth
 #+NAME: fig:enst
 [[./tgv_enstrophy.eps]]
 
 ** Visualisation
 
+The Taylor-Green vortex can be visualised by looking at the evolution of the instantaneous vorticity
+fields.
+As the output of =Xcompact3D= only includes the velocity and pressure fields, the vorticity field is
+computed using =Py4Incompact3d=[fn:py4incompact-python3].
+
+The computed vorticity fields are then visualised using =Paraview=, mirroring the \Omega=[0, \pi]^3 sub-domain
+about the $x$, $y$ and $z$ axes to recover the full \Omega=[-\pi, \pi]^3 solution with isosurfaces shown at
+several times in /fig./\nbsp[[fig:vort-iso]].
+In order to visualise these fields, a =.xdmf= file must be generated to instruct =Paraview= how to read
+the data, compiling the code in listing\nbsp[[src:paraview.f90]] and running the resulting executable will
+generate the necessary =visu.xdmf= file.
+
+#+CAPTION: Isosurfaces of vorticity *dummy figure*
+#+ATTR_LATEX: :options :width 0.75\textwidth
+#+NAME: fig:vort-iso
+[[./tgv_enstrophy.eps]]
+
+[fn:py4incompact-python3] For requirements see the =Py4Incompact3d= github project.
+
 * Changelog
 
 ** [2019-04-26 Fri]
 
+- Adding source code to generate =visu.xdmf=
 - Adding a visualisation section
 - Tidying up layout of the document
 - Added shell script to download data from =box=
+
+* Appendix
+
+#+CAPTION: Source code for generating =visu.xdmf=
+#+NAME: src:paraview.f90
+#+begin_src f90
+  program visu_paraview
+
+    implicit none
+
+    integer(4) :: nx,ny,nz
+    real(4) :: xlx,yly,zlz,dt,dx,dy,dz
+    integer(4) :: nfiles, icrfile, file1, filen, ifile, dig1, dig2, dig3, dig4
+    real(4), allocatable :: yp(:),y1(:),y3(:)
+    integer(4) :: i, j, k, num, aig, ii, nfil,istret,nclx, ncly, nclz
+
+    character(3) :: chits
+
+    nx = 65
+    ny = 65
+    nz = 65
+
+    xlx = 3.14159265358979
+    yly = 3.14159265358979
+    zlz = 3.14159265358979
+
+    nclx = 1
+    ncly = 1
+
+    nfiles = 21
+    file1 = 0
+    filen = 20
+
+    istret = 0
+
+    if (nclx==0) then
+       dx=xlx/nx
+    else
+       dx=xlx/(nx-1.)
+    endif
+    if (ncly==0) then
+       dy=yly/ny
+    else
+       dy=yly/(ny-1.)
+    endif
+    if (nclz==0) then
+       dz=zlz/nz
+    else
+       dz=zlz/(nz-1.)
+    endif
+    dt=1.
+
+    allocate(y1(nx))
+    allocate(yp(ny))
+    allocate(y3(nz))
+    do i=1,nx
+       y1(i)=(i-1)*dx
+    enddo
+    if (istret==1) then
+       print *,'We need to read the yp.dat file'
+       open(12,file='yp1.dat',form='formatted',status='unknown')
+       do j=1,ny
+          read(12,*) yp(j)
+       enddo
+       close(12)
+    else
+       do j=1,ny
+          yp(j)=(j-1)*dy
+       enddo
+    endif
+    do k=1,nz
+       y3(k)=(k-1)*dz
+    enddo
+
+    nfil=41
+    open(nfil,file='visu.xdmf')
+
+    write(nfil,'(A22)')'<?xml version="1.0" ?>'
+    write(nfil,*)'<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>'
+    write(nfil,*)'<Xdmf xmlns:xi="http://www.w3.org/2001/XInclude" Version="2.0">'
+    write(nfil,*)'<Domain>'
+    write(nfil,*)'    <Topology name="topo" TopologyType="3DRectMesh"'
+    write(nfil,*)'        Dimensions="',nz,ny,nx,'">'
+    write(nfil,*)'    </Topology>'
+    write(nfil,*)'    <Geometry name="geo" Type="VXVYVZ">'
+    write(nfil,*)'    <DataItem Dimensions="',nx,'" NumberType="Float" Precision="4" Format="XML">'
+    write(nfil,*)'    ',y1(:) 
+    write(nfil,*)'    </DataItem>'
+    write(nfil,*)'    <DataItem Dimensions="',ny,'" NumberType="Float" Precision="4" Format="XML">'
+    write(nfil,*)'    ',yp(:) 
+    write(nfil,*)'    </DataItem>'
+    write(nfil,*)'    <DataItem Dimensions="',nz,'" NumberType="Float" Precision="4" Format="XML">'
+    write(nfil,*)'    ',y3(:) 
+    write(nfil,*)'    </DataItem>'
+    write(nfil,*)'    </Geometry>'
+    write(nfil,'(/)')
+    write(nfil,*)'    <Grid Name="TimeSeries" GridType="Collection" CollectionType="Temporal">'
+    write(nfil,*)'        <Time TimeType="HyperSlab">'
+    write(nfil,*)'            <DataItem Format="XML" NumberType="Float" Dimensions="3">'
+    write(nfil,*)'           <!--Start, Stride, Count-->'
+    write(nfil,*)'            0.0',dt
+    write(nfil,*)'            </DataItem>'
+    write(nfil,*)'        </Time>'
+
+    do ifile = file1, filen
+
+  !IF THE DATA ARE STORED WITH 4 DIGITS, IE UX0001,UX0002,ETC.
+  !     dig1 =   ifile/1000 + 48
+  !     dig2 = ( ifile - 1000*( ifile/1000 ) )/100 + 48
+  !     dig3 = ( ifile - 100*( ifile/100 ) )/10 + 48
+  !     dig4 = ( ifile - 10*( ifile/10 ) )/1 + 48
+  !     chits(1:4) = char(dig1)//char(dig2)//char(dig3)//char(dig4)    
+
+  !IF THE DATA ARE STORED WITH 3 DIGITS, IE UX001,UX002,ETC.
+      dig1 =   ifile/100 + 48
+      dig2 = ( ifile - 100*( ifile/100 ) )/10 + 48
+      dig3 = ( ifile - 10*( ifile/10 ) )/1 + 48
+      chits(1:3) = char(dig1)//char(dig2)//char(dig3)
+
+       write(*,*) ifile, 'file'//chits
+
+       write(nfil,'(/)')
+       write(nfil,*)'        <Grid Name="'//chits//'" GridType="Uniform">'
+       write(nfil,*)'            <Topology Reference="/Xdmf/Domain/Topology[1]"/>'
+       write(nfil,*)'            <Geometry Reference="/Xdmf/Domain/Geometry[1]"/>'
+  !SINGLE PRECISION-->Precision=4
+  !DOUBLE PRECISION-->Precision=8
+       write(nfil,*)'            <Attribute Name="ux" Center="Node">'
+       write(nfil,*)'               <DataItem Format="Binary" '
+       write(nfil,*)'                DataType="Float" Precision="8" Endian="little"'
+       write(nfil,*)'                Dimensions="',nz,ny,nx,'">'
+       write(nfil,*)'                  ux'//chits
+       write(nfil,*)'               </DataItem>'
+       write(nfil,*)'            </Attribute>'
+
+  !it is possible to add as much field as you want
+  !    write(nfil,*)'            <Attribute Name="uy" Center="Node">'
+  !    write(nfil,*)'               <DataItem Format="Binary" '
+  !    write(nfil,*)'                DataType="Float" Precision="8" Endian="little"'
+  !    write(nfil,*)'                Dimensions="',nz,ny,nx,'">'
+  !    write(nfil,*)'                  uy'//chits
+  !    write(nfil,*)'               </DataItem>'
+  !    write(nfil,*)'            </Attribute>'
+      write(nfil,*)'            <Attribute Name="uy" Center="Node">'
+      write(nfil,*)'               <DataItem Format="Binary" '
+      write(nfil,*)'                DataType="Float" Precision="8" Endian="little"'
+      write(nfil,*)'                Dimensions="',nz,ny,nx,'">'
+      write(nfil,*)'                  uy'//chits
+      write(nfil,*)'               </DataItem>'
+      write(nfil,*)'            </Attribute>'
+      write(nfil,*)'            <Attribute Name="uz" Center="Node">'
+      write(nfil,*)'               <DataItem Format="Binary" '
+      write(nfil,*)'                DataType="Float" Precision="8" Endian="little"'
+      write(nfil,*)'                Dimensions="',nz,ny,nx,'">'
+      write(nfil,*)'                  uz'//chits
+      write(nfil,*)'               </DataItem>'
+      write(nfil,*)'            </Attribute>'
+
+      write(nfil,*)'            <Attribute Name="vort" Center="Node">'
+      write(nfil,*)'               <DataItem Format="Binary" '
+      write(nfil,*)'                DataType="Float" Precision="8" Endian="little"'
+      write(nfil,*)'                Dimensions="',nz,ny,nx,'">'
+      write(nfil,*)'                  vort'//chits
+      write(nfil,*)'               </DataItem>'
+      write(nfil,*)'            </Attribute>'
+
+      write(nfil,*)'            <Attribute Name="rho" Center="Node">'
+      write(nfil,*)'               <DataItem Format="Binary" '
+      write(nfil,*)'                DataType="Float" Precision="8" Endian="little"'
+      write(nfil,*)'                Dimensions="',nz,ny,nx,'">'
+      write(nfil,*)'                  rho'//chits
+      write(nfil,*)'               </DataItem>'
+      write(nfil,*)'            </Attribute>'
+
+      write(nfil,*)'            <Attribute Name="phi" Center="Node">'
+      write(nfil,*)'               <DataItem Format="Binary" '
+      write(nfil,*)'                DataType="Float" Precision="8" Endian="little"'
+      write(nfil,*)'                Dimensions="',nz,ny,nx,'">'
+      write(nfil,*)'                  phi'//chits
+      write(nfil,*)'               </DataItem>'
+      write(nfil,*)'            </Attribute>'
+
+       write(nfil,*)'        </Grid>'
+
+    enddo
+    write(nfil,'(/)')
+    write(nfil,*)'    </Grid>'
+    write(nfil,*)'</Domain>'
+    write(nfil,'(A7)')'</Xdmf>'
+    close(nfil)
+
+  end program visu_paraview
+#+end_src
 
