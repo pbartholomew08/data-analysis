@@ -1,0 +1,54 @@
+#+TITLE: Channel Flow
+#+AUTHOR: Paul Bartholomew
+
+#+LATEX_HEADER: \usepackage{fullpage}
+#+LATEX_HEADER: \hypersetup{colorlinks}
+
+* Introduction
+
+The channel flow is tested for two friction velocity Reynolds numbers: $Re_{\tau}=180$ and
+$Re_{\tau}=1,000$ and the data compared with LEE2015.
+
+* Case setup
+
+Both simulations are run with periodic - no-slip - periodic boundary conditions, hyper-viscous 6^{th}
+order aggressive optimised operators and =RK3= time integration, all other parameters are given in
+table\nbsp[[tab:runtime-param]].
+
+#+CAPTION: Runtime parameters for the channel flow test case @ $Re_\tau=180$ and $Re_\tau=1,000$.
+#+NAME: tab:runtime-param
+|------------+-------------+-------------|
+| Parameter  |   $Re_\tau=180$ | $Re_\tau=1,000$ |
+|------------+-------------+-------------|
+| l_x         |          12 |          15 |
+| l_y         |           2 |           2 |
+| l_z         |           6 |           4 |
+| n_x         |         128 |        1024 |
+| n_y         |         129 |         513 |
+| n_z         |         128 |        1024 |
+| \beta          | 0.259065151 | 0.171045691 |
+| \Delta{}t         |      5\times10^{-3} |      6\times10^{-4} |
+| $Re_b$      |       4,200 |      30,000 |
+| t_{rot}       |       5,000 |      41,667 |
+| t_trans     |      40,000 |     333,333 |
+| t_stat      |     100,000 |     833,333 |
+| $u'(t=0)$  |       0.125 |       0.125 |
+
+** Scaling
+
+Due to concerns about runtime of the high-Reynolds case, a scaling study was run for 10\Delta{}t on 4096,
+8192, 16384 and 32768 =CPU= of =Hazel Hen=[fn:one-shot].
+The results are given in table\nbsp[[tab:scaling]].
+
+#+CAPTION: Scaling study results
+#+NAME: tab:scaling
+|-------+------------------+------------------|
+|  =NCPU= | Clock / \Delta{}t [ s ] | Efficiency [ % ] |
+|-------+------------------+------------------|
+|  4096 |                  |                - |
+|  8192 |                  |               10 |
+| 16384 |                  |               80 |
+| 32768 |                  |               72 |
+
+[fn:one-shot] Note that the scaling study was based on single runs so should not be taken as
+authoritative.
