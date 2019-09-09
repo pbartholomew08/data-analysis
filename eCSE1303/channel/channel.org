@@ -6,49 +6,65 @@
 
 * Introduction
 
-The channel flow is tested for two friction velocity Reynolds numbers: $Re_{\tau}=180$ and
-$Re_{\tau}=1,000$ and the data compared with LEE2015.
+The channel flow is tested for the friction velocity Reynolds number $Re_{\tau}=180$ and the data
+compared with LEE2015.
 
 * Case setup
 
-Both simulations are run with periodic - no-slip - periodic boundary conditions, hyper-viscous 6^{th}
+The simulations are run with periodic - no-slip - periodic boundary conditions, hyper-viscous 6^{th}
 order aggressive optimised operators and =RK3= time integration, all other parameters are given in
 table\nbsp[[tab:runtime-param]].
 
-#+CAPTION: Runtime parameters for the channel flow test case @ $Re_\tau=180$ and $Re_\tau=1,000$.
+#+CAPTION: Runtime parameters for the channel flow test case @ $Re_\tau=180$
 #+NAME: tab:runtime-param
-|------------+-------------+-------------|
-| Parameter  |   $Re_\tau=180$ | $Re_\tau=1,000$ |
-|------------+-------------+-------------|
-| l_x         |          12 |          15 |
-| l_y         |           2 |           2 |
-| l_z         |           6 |           4 |
-| n_x         |         128 |        1024 |
-| n_y         |         129 |         513 |
-| n_z         |         128 |        1024 |
-| \beta          | 0.259065151 | 0.171045691 |
-| \Delta{}t         |      5\times10^{-3} |      6\times10^{-4} |
-| $Re_b$      |       4,200 |      30,000 |
-| t_{rot}       |       5,000 |      41,667 |
-| t_trans     |      40,000 |     333,333 |
-| t_stat      |     100,000 |     833,333 |
-| $u'(t=0)$  |       0.125 |       0.125 |
+|-----------+-------------|
+| Parameter |   $Re_\tau=180$ |
+|-----------+-------------|
+| l_x        |          12 |
+| l_y        |           2 |
+| l_z        |           6 |
+| n_x        |         128 |
+| n_y        |         129 |
+| n_z        |         128 |
+| \beta         | 0.259065151 |
+| \Delta{}t        |      5\times10^{-3} |
+| $Re_b$     |       4,200 |
+| t_{rot}      |       5,000 |
+| t_trans    |      40,000 |
+| t_stat     |     100,000 |
+| $u'(t=0)$ |       0.125 |
 
-** Scaling
+Initial results showed poor agreement with the reference data and were improved by increasing the
+$x$ resolution and period of statistics collection as given in table\nbsp[[tab:runtime-param-mod]].
 
-Due to concerns about runtime of the high-Reynolds case, a scaling study was run for 10\Delta{}t on 4096,
-8192, 16384 and 32768 =CPU= of =Hazel Hen=[fn:one-shot].
-The results are given in table\nbsp[[tab:scaling]].
+#+CAPTION: Modified runtime parameters for the channel flow test case @ $Re_\tau=180$
+#+NAME: tab:runtime-param-mod
+|-----------+-----------|
+| Parameter | $Re_\tau=180$ |
+|-----------+-----------|
+| n_x        | 256       |
+| \Delta{}t        | 2.5\times10^{-3}  |
+| t_{rot}      | 10,000    |
+| t_{trans}    | 100,000   |
+| t_{stat}     | 300,000   |
 
-#+CAPTION: Scaling study results
-#+NAME: tab:scaling
-|-------+------------------+------------------|
-|  =NCPU= | Clock / \Delta{}t [ s ] | Efficiency [ % ] |
-|-------+------------------+------------------|
-|  4096 |                  |                - |
-|  8192 |                  |               10 |
-| 16384 |                  |               80 |
-| 32768 |                  |               72 |
+* Analysis
 
-[fn:one-shot] Note that the scaling study was based on single runs so should not be taken as
-authoritative.
+The analysis of the results uses =Py4Incompact3d=, in addition to tools from =numpy= and =matplotlib=.
+
+#+CAPTION: Import tools
+#+NAME: src:imports.py
+#+begin_src python
+  import numpy as np
+  import matplotlib.pyplot as plt
+
+  import Py4Incompact3d
+#+end_src
+
+** Comparison with reference data
+
+To check the simulation, we compare the statistics for $\langle u_+ \rangle, \langle u'_+ \rangle, \langle v'_+ \rangle$ and $\langle w'_+ \rangle$
+with the reference data of LEE and VREMAN.
+
+** Energy spectra
+
